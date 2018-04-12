@@ -284,8 +284,6 @@ def main():
             # The adder starts at 0 because no cards are shown in the wood pile to start
             self.validMove = False # For checking whether there is still a valid move or not (so eventually the player can flip a card to the bottom of their wood pile from the top) 
 
-            print(self.deck)
-            
         def handle_keys(self):
             # Finding whether there is a valid move or not
             self.validMove = self.findValidMove() if not self.validMove else True
@@ -297,7 +295,7 @@ def main():
                 elif event.type == pygame.KEYDOWN:
                     for hotkey in self.hotkeydict:
                         if event.key == hotkey:
-
+                            print([0 for c in self.woodpile if c == 0])
                             # If there was no previous pile selected, then the pile variable is set to the pile selected
                             if self.prevhotkey == None:
                                 self.prevhotkey = hotkey
@@ -322,11 +320,7 @@ def main():
                                         prevplace = self.woodpile.index(self.hotkeydict[hotkey].stackList[-1])
                                         
                                         # Completely remaking the woodpile (if you self the previous card to 0, then the card changes in the stack that it has been moved to)
-                                        temppile = []
-                                        for card in self.woodpile:
-                                            temppile += [card]
-                                        self.woodpile = copy(temppile)
-                                        
+                                        self.woodpile = self.woodpile[:]
                                         self.woodpile[prevplace] = 0 # Setting to 0 for removal later
                                         self.woodpileadder -= 1 # Modifying the adder to show less cards when updating
                                     self.hotkeydict[self.prevhotkey].poptopcard()
@@ -411,7 +405,7 @@ def main():
 
         def flipWoodPile(self):
             # Removing all 0's when starting to flip through
-            if self.woodpilepos in [0, 1, 2]:
+            if self.woodpilepos in [0, 1, 2, 3, 4, 5]:
                 self.removeZeroes()
 
             self.woodpilepos += 3 # Iterating by 3
