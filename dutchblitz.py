@@ -1,8 +1,14 @@
+#from Connection import ConnectionListener, connection
+from time import sleep
 import pygame
 from copy import *
 import math
 import sys
 import random
+
+
+# CONNECTING TO SERVER
+#connection.Connect()
 
 def main():
     ## All of the first things to initialize
@@ -263,8 +269,8 @@ def main():
             return self.stackList[0]
 
 
-    
     class Player:
+#    class Player(ConnectionListener):
         def __init__(self, playerID, hotkeysetup, cardwidth, cardheight, cardbdwidth, dutchpiles=None):
             ##### ADD IN BOT
 
@@ -290,8 +296,25 @@ def main():
             # For changing shift
             self.changeShiftPromp = False
 
-            print(self.deck)
+        # ALL NETWORK FUNCTIONS
+        def Network(self, data):
+            print("network data:", data)
+
+        def Network_connected(self, data):
+            print("connecte4d to the server")
+        
+        def Network_error(self, data):
+            print("error:". data["error"][1])
+
+        def Network_disconnected(self, data):
+            print("disconnected from server")
+
+        def Network_myaction(data):
+            print("myaction:", data)
+
         def handle_keys(self):
+            # THIS ALSO DRAWS THE STACKS
+
             # Finding whether there is a valid move or not
             self.validMove = self.findValidMove() if not self.validMove else True
 
@@ -548,6 +571,7 @@ def main():
     # Making the loop that runs the program
     mainloop = True
     while mainloop:
+#        connection.Pump()
 
         p1.handle_keys() # Having the player class handle the keys
 
