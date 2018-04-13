@@ -159,6 +159,9 @@ def main():
             elif self.stackType == "dutch" and len(self.stackList) == 1 and card.number == 1: # There is a only a placeholder only if len(self.stackList) == 1, then add card if the number is 1
                 toStack = True
             
+            # If it is not initialization and the post pile is empty (only placeHolder left), you are NOT allowed to stack
+            if self.stackList[-1].placeHolder and self.stackType == "blitz" and not initialization:
+                toStack = False
                 
             # Checking for dutch piles
             if len(self.stackList) > 1: # If there is a card other than a placeholder in the stack
@@ -284,6 +287,10 @@ def main():
             # The adder starts at 0 because no cards are shown in the wood pile to start
             self.validMove = False # For checking whether there is still a valid move or not (so eventually the player can flip a card to the bottom of their wood pile from the top) 
 
+            # For changing shift
+            self.changeShiftPromp = False
+
+            print(self.deck)
         def handle_keys(self):
             # Finding whether there is a valid move or not
             self.validMove = self.findValidMove() if not self.validMove else True
@@ -306,42 +313,65 @@ def main():
                                 self.hotkeydict[hotkey].deselect_top_card()
 
                             else: # The stacking part
-                                # Stacking a stack on top of another
-                                if self.hotkeydict[self.prevhotkey].stackType == "post" and self.hotkeydict[hotkey].stackType == "post": # Only case where there is a stack of cards to stack on top of another stack
-                                    cardlist = self.hotkeydict[self.prevhotkey].returnCards()
-                                    if self.hotkeydict[hotkey].stackCardList(cardlist):# if stacking is successful, then clear the rest of the cards where there was a stack before
-                                        self.hotkeydict[self.prevhotkey].clearCards()
+                                try:
+                                    # Stacking a stack on top of another
+                                    if self.hotkeydict[self.prevhotkey].stackType == "post" and self.hotkeydict[hotkey].stackType == "post": # Only case where there is a stack of cards to stack on top of another stack
+                                        cardlist = self.hotkeydict[self.prevhotkey].returnCards()
+                                        if self.hotkeydict[hotkey].stackCardList(cardlist):# if stacking is successful, then clear the rest of the cards where there was a stack before
+                                            self.hotkeydict[self.prevhotkey].clearCards()
 
-                                # If the stacking if valid, popping the top card of the stack that has been accessed
-                                elif self.hotkeydict[hotkey].stackCard(self.hotkeydict[self.prevhotkey].stackList[-1]):
+                                    # If the stacking if valid, popping the top card of the stack that has been accessed
+                                    elif self.hotkeydict[hotkey].stackCard(self.hotkeydict[self.prevhotkey].stackList[-1], True):
+                                        card = self.hotkeydict[self.prevhotkey].stackList[-1] # Creating a copy of this
 
-                                    # For the wood pile, it is needed to fill in the space with 0 (explained in function "removeZeroes") 
-                                    if self.hotkeydict[hotkey].stackList[-1] in self.woodpile:
-                                        prevplace = self.woodpile.index(self.hotkeydict[hotkey].stackList[-1])
+                                        # Copying the card (Otherwise if the card is edited in the list, then it changes in the stack)
+                                        tempcolor = card.color
+                                        tempnumber = card.number
+                                        tempcard = copy(Card(self.playerID, tempcolor, tempnumber, self.cardbdwidth, self.cardwidth, self.cardheight, (10, 0)))
                                         
-                                        # Completely remaking the woodpile (if you self the previous card to 0, then the card changes in the stack that it has been moved to)
-                                        self.woodpile = self.woodpile[:]
-                                        self.woodpile[prevplace] = 0 # Setting to 0 for removal later
-                                        self.woodpileadder -= 1 # Modifying the adder to show less cards when updating
-                                    self.hotkeydict[self.prevhotkey].poptopcard()
+                                        # Stacking the copied card
+                                        self.hotkeydict[hotkey].stackCard(tempcard)
+
+                                        # For the wood pile, it is needed to fill in the space with 0 (explained in function "removeZeroes") 
+                                        if card in self.woodpile:
+                                            prevplace = self.woodpile.index(card)
+                                            # Completely remaking the woodpile (if you self the previous card to 0, then the card changes in the stack that it has been moved to)
+                                            self.woodpile = list(self.woodpile)
+                                            self.woodpile[prevplace] = 0 # Setting to 0 for removal later
+                                            self.woodpileadder -= 1 # Modifying the adder to show less cards when updating
+
+                                        self.hotkeydict[self.prevhotkey].poptopcard()
 
 
-                                # Deselecting the card seletected before
-                                self.hotkeydict[hotkey].deselect_top_card()
-                                self.hotkeydict[self.prevhotkey].deselect_top_card()
+                                    # Deselecting the card seletected before
+                                    self.hotkeydict[hotkey].deselect_top_card()
+                                    self.hotkeydict[self.prevhotkey].deselect_top_card()
 
-                                # Resetting the selectedpile
-                                self.prevhotkey = None
-
-                            self.drawStacks()
+                                    # Resetting the selectedpile
+                                    self.prevhotkey = None
+                                except:
+                                    print("An error in stacking your card has occured, please continue playing.")
+                                
+                                try:
+                                    self.drawStacks()
+                                except:
+                                    print("An error in displaying your cards has occured, please continue playing.")
                         
                     else:
                         # If an invalid key was pressed or the flip key, then the previous selected card is deselected
                         if hotkey not in self.hotkeydict or hotkey == self.hotkeysetup[-1]:
                             self.hotkeydict[self.prevhotkey].deselect_top_card()
-
-                    if event.key == self.hotkeysetup[-1]: # For flipping wood pile
+                    
+                    # FLIPPING WOOD PILE
+                    if event.key == self.hotkeysetup[-1]: 
                         self.flipWoodPile()
+                        self.drawStacks()
+                    # CHANGING SHIFT (only done if there is no valid move to do, which is prompted)
+                    elif event.key == self.hotkeysetup[-2] and self.changeShiftPrompt:
+                        self.changeShift()
+                        # Taking away the zeroes and resetting the wood pile
+                        self.woodpilepos = 0
+                        self.removeZeroes()
                         self.drawStacks()
 
 
@@ -405,6 +435,7 @@ def main():
 
         def flipWoodPile(self):
             # Removing all 0's when starting to flip through
+
             if self.woodpilepos in [0, 1, 2, 3, 4, 5]:
                 self.removeZeroes()
 
@@ -412,7 +443,10 @@ def main():
 
             if self.woodpilepos >= len(self.woodpile): # Greater than or equal to otherwise it will show the placeholder card at the end
                 if not self.validMove: # Detects whether there is a move or not that works
-                    print("No moves left.")
+                    print("No moves left, press " + str(self.hotkeysetup[-2]) + " to take the top card of the wood pile and put it on the botttom.")
+
+                    # Setting the variable to allow the user to shift the wood pile
+                    self.changeShiftPrompt = True
 
                 # Resets self.validMove for the next round of flipping
                 self.validMove = False
@@ -422,6 +456,9 @@ def main():
                 
                 # The shift is only temporary because once it cycles through, the holes don't need to be accounted for anymore
                 self.woodpileshift = 0
+
+                # Removing the zeroes
+                self.removeZeroes()
             
             # Resetting the adder because when a new set of three is flipped, it always shows three cards
             self.woodpileadder = 3
@@ -434,6 +471,8 @@ def main():
            
 
             # Looking at two stacks and comparing them for each case
+            
+            validmove = False 
 
             for hotkey1 in self.hotkeydict:
                 for hotkey2 in self.hotkeydict:
@@ -442,39 +481,43 @@ def main():
                         if self.hotkeydict[hotkey1].stackType == "post" and self.hotkeydict[hotkey2].stackType == "post":
                             if self.hotkeydict[hotkey2].stackCardList(self.hotkeydict[hotkey1].stackList, True):
                                 print(hotkey1, hotkey2)
-                                return True 
+                                validmove = True 
 
                         # WOOD-POST
                         elif self.hotkeydict[hotkey1].stackType == "wood" and self.hotkeydict[hotkey2].stackType == "post":
                             if self.hotkeydict[hotkey2].stackCard(self.hotkeydict[hotkey1].stackList[-1], True):
                                 print(hotkey1, hotkey2)
-                                return True
+                                validmove = True 
                         
                         # BLITZ-POST
                         elif self.hotkeydict[hotkey1].stackType == "blitz" and self.hotkeydict[hotkey2].stackType == "post":
                             if self.hotkeydict[hotkey2].stackCard(self.hotkeydict[hotkey1].stackList[-1], True):
                                 print(hotkey1, hotkey2)
-                                return True
+                                validmove = True 
 
                         # WOOD-DUTCH
                         elif self.hotkeydict[hotkey1].stackType == "wood" and self.hotkeydict[hotkey2].stackType == "dutch":
                             if self.hotkeydict[hotkey2].stackCard(self.hotkeydict[hotkey1].stackList[-1], True):
                                 print(hotkey1, hotkey2)
-                                return True 
+                                validmove = True 
                         
                         # BLITZ-DUTCH
                         elif self.hotkeydict[hotkey1].stackType == "blitz" and self.hotkeydict[hotkey2].stackType == "dutch":
                             if self.hotkeydict[hotkey2].stackCard(self.hotkeydict[hotkey1].stackList[-1], True):
                                 print(hotkey1, hotkey2)
-                                return True
+                                validmove = True 
 
                         # POST-DUTCH
                         elif self.hotkeydict[hotkey1].stackType == "post" and self.hotkeydict[hotkey2].stackType == "dutch":
                             if self.hotkeydict[hotkey2].stackCard(self.hotkeydict[hotkey1].stackList[-1], True):
                                 print(hotkey1, hotkey2)
-                                return True 
+                                validmove = True 
+            
+            # If there is a valid move, there is no need to change the shift
+            if validmove:
+                self.changeShiftPrompt = False 
 
-            return False 
+            return validmove 
 
 
         def drawStacks(self):
@@ -487,6 +530,8 @@ def main():
         def changeShift(self):
             # This is for when the players get stuck, put the top card of the stack on the bottom
             # The top 3 cards are spacers, so take the 4th (3rd in 0-indexing)
+
+            print("The wood pile has been changed, flip the wood pile to continue")
             topCard = self.woodpile[3]
             self.woodpile.remove(topCard)
             self.woodpile += [topCard]
