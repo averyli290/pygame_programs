@@ -39,8 +39,10 @@ def main():
             self.clock = pygame.time.Clock()
 
             self.mousesens = 10
+            self.radian = 0
 
         def events(self, event):
+            return 1
             if event.type == pygame.MOUSEMOTION:
                 x, y = event.rel
                 x /= self.mousesens
@@ -79,6 +81,7 @@ def main():
                 self.events(event)
 
             # Updating camera view depending on key inputs (in small increments, hence the 1000)
+            self.radian += dt
             key = pygame.key.get_pressed()
             self.update(dt, key)
 
@@ -147,6 +150,8 @@ def main():
 
                     # Adding in the mouse rotation
                     # Rotating on the y axis first, then x axis
+
+                    x, z = self.rotate2d((x, z), self.radian)
 
                     x, z = self.rotate2d((x, z), self.camrot[1])
                     y, z = self.rotate2d((y, z), self.camrot[0])
