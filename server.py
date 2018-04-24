@@ -1,5 +1,6 @@
 from PodSixNet.Channel import Channel
 from PodSixNet.Server import Server
+import time
 
 class ClientChannel(Channel):
 
@@ -21,4 +22,4 @@ class MyServer(Server):
 myserver = MyServer()
 while True:
     myserver.Pump()
-    sleep(0.0001)
+    time.sleep(0.0001)
