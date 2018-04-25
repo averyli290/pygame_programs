@@ -82,8 +82,8 @@ def main():
                 self.events(event)
 
             # Rendering the faces
-            #self.renderFaces()
-            self.renderEdges()
+            self.renderFaces()
+            #self.renderEdges()
             # Updating camera view depending on key inputs (in small increments, hence the 1000)
             key = pygame.key.get_pressed()
             self.update(dt, key)
@@ -115,7 +115,10 @@ def main():
             x -= self.campos[0]
             y -= self.campos[1]
             z -= self.campos[2]
-            
+
+            # Making sure that there is no division by zero
+            z = 1 if z == 0 else z
+
             # Rotating on the y axis first, then x axis
             x, z = self.rotate2d((x, z), self.camrot[1])
             y, z = self.rotate2d((y, z), self.camrot[0])
@@ -163,8 +166,9 @@ def main():
                     
                     # Adding the point to the list
                     screen_coords += [(self.cx+int(x), self.cy+int(y))]
-
-                    width = max(abs(int(30/z)), 1)
+                    
+                    # Thickness of lines (has to be at least 1, max is 100)
+                    width = min(100, max(abs(int(30/z)), 1))
                 
                 pygame.draw.line(self.screen, (0, 0, 0), screen_coords[0], screen_coords[1], width)
 
@@ -180,11 +184,18 @@ def main():
             screen_coords = []
             points = []
             for x,y,z in self.verts:
+                x -= self.campos[0]
+                y -= self.campos[1]
+                z -= self.campos[2]
+
                 x, z = self.rotate2d((x, z), self.camrot[1])
-                x, y = self.rotate2d((x, y), self.camrot[0])
+                y, z = self.rotate2d((y, z), self.camrot[0])
 
                 points += [(x,y,z)]
                 
+                # Making sure that there is no division by zero
+                z = 1 if z == 0 else z
+
                 depth = self.depthVar/z
                 x,y = x*depth, y*depth
                 
@@ -201,7 +212,7 @@ def main():
                 
                 # For each of the verticies in the face, if the z coord is > 0, then true
                 for i in face:
-                    if points[i][2] > 0: on_screen = True; break
+                    if points[i][2] > 0: on_screen = True; break; print(1)
                 
                 if on_screen:
                     # Getting the coordinates for each vertex on the face
@@ -211,8 +222,9 @@ def main():
                     face_list += [coords]
             
             for i in range(len(face_list)):
-                color = random.randint(0, 255)
-                pygame.draw.polygon(self.screen, (color, color, color), face_list[i], 0)
+                pygame.draw.polygon(self.screen, (40*i, 40*i, 40*i), face_list[i])
+
+            pygame.display.flip()
 
     p = Player(screen, (0, 255, 255), (0, 0, -5))
     p.initializeSetting()
