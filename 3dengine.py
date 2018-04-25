@@ -40,7 +40,7 @@ def main():
             self.clock = pygame.time.Clock()
             
             # The higher this variable is, the lower the sensitivity (because we are dividing values by this number to get the rotation)
-            self.mousesens = 10000
+            self.mousesens = 10000000
 
         def events(self, event):
             if event.type == pygame.MOUSEMOTION:
@@ -164,7 +164,9 @@ def main():
                     # Adding the point to the list
                     screen_coords += [(self.cx+int(x), self.cy+int(y))]
 
-                pygame.draw.line(self.screen, (0, 0, 0), screen_coords[0], screen_coords[1], 1)
+                    width = max(abs(int(30/z)), 1)
+                
+                pygame.draw.line(self.screen, (0, 0, 0), screen_coords[0], screen_coords[1], width)
 
             pygame.display.flip()
 
