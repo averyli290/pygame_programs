@@ -40,13 +40,16 @@ def main():
             self.clock = pygame.time.Clock()
             
             # The higher this variable is, the lower the sensitivity (because we are dividing values by this number to get the rotation)
-            self.mousesens = 10000000
+            self.mousesens = 1600000 
 
         def events(self, event):
             if event.type == pygame.MOUSEMOTION:
                 x, y = event.rel
+                print(x, y)
                 x /= self.mousesens
                 y /= self.mousesens
+                print(x, y)
+                print()
 
                 self.camrot[0] += y
                 self.camrot[1] += x 
@@ -151,7 +154,7 @@ def main():
         def renderEdges(self):
             
             # Clearing the screen
-            screen.fill((255, 255, 255))
+            #screen.fill((255, 255, 255))
             
             # Rendering edges
             for edge in self.edges:
@@ -212,7 +215,7 @@ def main():
                 
                 # For each of the verticies in the face, if the z coord is > 0, then true
                 for i in face:
-                    if points[i][2] > 0: on_screen = True; break; print(1)
+                    if points[i][2] > 0: on_screen = True; break
                 
                 if on_screen:
                     # Getting the coordinates for each vertex on the face
