@@ -22,10 +22,43 @@ def main():
         faces = [(0, 1, 2, 3), (4, 5, 6, 7), (0, 1, 5 , 4), (2, 3, 7 ,6), (0, 3, 7, 4), (1, 2, 6, 5)]
         colors = [(255, 0, 0), (255, 128, 0), (255, 255, 0), (255, 255, 255), (0, 0, 255), (0, 255, 0)]
         def __init__(self, pos=(0,0,0)):
-            
+            pygame.sprite.Sprite.__init__(self)
+
             x,y,z = pos
             # Getting all of the verticies
             self.verts = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.verticies]
+
+    class Crosshair(pygame.sprite.Sprite):
+        def __init__(self, screen, color=(192,192,192), width=12, height=12, thickness=2, centergap=6):
+            pygame.sprite.Sprite.__init__(self)
+
+            # surface that crosshair will be on
+            self.surface = pygame.Surface((width*2+centergap, height*2+centergap))
+            # making it transparent
+            self.surface.set_colorkey((0, 0, 0))
+
+            self.screen = screen
+            self.rect = self.surface.get_rect()
+            self.color = color
+            self.width = width
+            self.height = height
+            self.thickness = thickness
+            self.centergap = centergap 
+
+            self.totalwidth = self.width*2
+            self.totalheight = self.height*2
+
+            # drawing crosshair
+            pygame.draw.rect(self.surface, color, (width-int(self.thickness/2), 0, self.thickness, height-int(self.centergap/2)))
+            pygame.draw.rect(self.surface, color, (0, height-int(self.thickness/2), width-int(self.centergap/2), self.thickness))
+            pygame.draw.rect(self.surface, color, (width-int(self.thickness/2), self.height+int(self.centergap/2), self.thickness, height-int(self.centergap/2)))
+            pygame.draw.rect(self.surface, color, (self.width+int(self.centergap/2), self.height-int(self.thickness/2), width-int(self.centergap/2), self.thickness))
+
+            self.screen.blit(self.surface, ((self.screen.get_width()-self.totalwidth)/2, (self.screen.get_height()-self.totalheight)/2))
+
+        def redraw(self): 
+            # redrawing crosshair at the center of the screen
+            self.screen.blit(self.surface, ((self.screen.get_width()-self.totalwidth)/2, (self.screen.get_height()-self.totalheight)/2))
 
     class Player(pygame.sprite.Sprite):
         def __init__(self, screen, color, bgcolor, objlist=[], pos=(0, 0, 0), rot=(0, 0), verts=[], edges=[], faces=[]):
@@ -51,10 +84,10 @@ def main():
             self.campos = list(pos)
             self.camrot = list(rot)
             self.clock = pygame.time.Clock()
-
-            # Make crosshair surface bg transparent
-            #self.crosshairsurf = 
             
+            # Making crosshair
+            self.crosshair = Crosshair(self.screen, (0, 255, 0))
+
             # The higher this variable is, the lower the sensitivity (because we are dividing values by this number to get the rotation)
             self.mousesens = 600 
 
@@ -261,13 +294,15 @@ def main():
                 try: pygame.draw.polygon(self.screen, color_list[i], face_list[i])
                 except: pass
 
-            pygame.display.flip()
+            # Addding in the crosshair
+            self.crosshair.redraw()
 
     p = Player(screen, (0, 255, 255), (0, 0, 70), [Cube((0, 0, 0)), Cube((0, 0, 1)), Cube((1, 0, 0))])
     p.initializeSetting()
 
     while True:
         p.handle_keys()
+        pygame.display.flip()
         #p.renderFaces()
 
 
