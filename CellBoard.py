@@ -21,7 +21,8 @@ class Cell(pygame.sprite.Sprite):
         # The border lines are width/10 and height/10 size
         self.wbdwidth = self.width/10
         self.hbdwidth = self.height/10
-        self.cellfill = pygame.Surface((self.width-self.hbdwidth, self.height-self.wbdwidth))
+        if border: self.cellfill = pygame.Surface((self.width-self.hbdwidth, self.height-self.wbdwidth))
+        else: self.cellfill = pygame.Surface((self.width, self.height))
         self.cellfill.fill((255, 255, 255))
         self.drawCell()
 
@@ -54,7 +55,7 @@ class Cell(pygame.sprite.Sprite):
         self.surface.blit(self.image, self.topleft)
 
 class CellBoard:
-    def __init__(self, surface, cellwidth=20, cellheight=20, boardwidth=25, boardheight=25, borders=True):
+    def __init__(self, surface, borders=True, verts=False, cellwidth=20, cellheight=20, boardwidth=25, boardheight=25):
             
         self.surface = surface
         # Adding some amount later to compensate for the divider lines later (thickness of divider lines)
@@ -67,37 +68,48 @@ class CellBoard:
         self.boardheight = boardheight
         self.borders = borders
         self.celllist = self.initializeBoard()
+        if verts: self.vertlist = self.initializeVerticies()
 
     def initializeBoard(self):
         celllist = []
 
         # Initializing cells
+        
+        # This works
+        #celllist = [[Cell(self.boardSurface, (255,255,255), (i*self.cellwidth, j*self.cellheight), self.cellwidth, self.cellheight) for j in range(self.boardheight)] for i in range(self.boardwidth)]
+        
         for i in range(self.boardwidth):
             celllist.append([])
             for j in range(self.boardheight):
                 x, y = i*self.cellwidth, j*self.cellheight
                 celllist[i].append(Cell(self.boardSurface, (255,255,255), (x, y), self.cellwidth, self.cellheight))
 
-        if self.borders: self.initializeBorders()
-        
         # Adding the board to the surface given  
         self.surface.blit(self.boardSurface, (0, 0))
 
         return celllist 
+    
+    def initializeVerticies(self):
+        
+        # Initializing the verticies
+        
+        vertlist = []
 
-    def initializeBorders(self):
-
-        # Initializing borders
-
+        vertwidth = self.cellwidth/5
+        vertheight = self.cellheight/5
+        
+        # This works
+        #vertlist = [[Cell(self.boardSurface, (255,255,255), (i*self.cellwidth, j*self.cellheight), vertwidth, vertheight, False) for j in range(self.boardheight+1)] for i in range(self.boardwidth+1)]
+       
+        
         for i in range(self.boardwidth+1):
-            thickness = int(self.cellwidth/10)
+            vertlist.append([])
+            for j in range(self.boardheight+1):
+                x, y = i*self.cellwidth, j*self.cellheight
+                vertlist[i].append(Cell(self.boardSurface, (255, 255, 255), (x, y), vertwidth, vertheight, False))
+        
 
-            pygame.draw.rect(self.boardSurface, (0, 0, 0), (i*self.cellwidth, 0, thickness, self.boardheight*self.cellheight))
-                
-        for j in range(self.boardheight+1):
-            thickness = int(self.cellheight/10)
-            
-            pygame.draw.rect(self.boardSurface, (0, 0, 0), (0, j*self.cellheight, self.boardheight*self.cellwidth, thickness))
+        return vertlist
 
     def fillCell(self, x, y, color=(0, 0, 0)):
         if self.validCell(x, y):
@@ -112,10 +124,27 @@ class CellBoard:
             self.surface.blit(self.boardSurface, (0, 0))
             return True
         return False
+    
+    def fillVert(self, x, y, color=(0, 0, 0)):
+        if self.validVert(x, y):
+            self.vertlist[x][y].fill(color)
+            self.surface.blit(self.boardSurface, (0, 0))
+            return True
+        return False
+
+    def eraseVert(self, x, y):
+        if self.validVert(x, y):
+            self.vertlist[x][y].fill((255,255,255))
+            self.surface.blit(self.boardSurface, (0, 0))
+            return True
+        return False
 
     def validCell(self, x, y):
         return x in range(0, self.boardwidth) and y in range(0, self.boardheight)
     
+    def validVert(self, x, y):
+        return x in range(0, self.boardwidth+1) and y in range(0, self.boardheight+1)
+
     def cell_coords(self, mx, my):
         return (mx//self.cellwidth, my//self.cellheight) if self.validCell(mx//self.cellwidth, my//self.cellheight) else (-1, -1)
 
@@ -139,8 +168,12 @@ class CellBoard:
             for cell in l:
                 cell.drawCell()
         
-        self.initializeBorders()
-            
+        try:
+            for l in self.vertlist:
+                for vert in l:
+                    vert.drawCell()
+        except:
+            pass
 
 #############
 # TEST CODE #
@@ -153,7 +186,8 @@ screen = pygame.display.set_mode((size))
 screen.fill((255,255,255))
 
 
-b = CellBoard(screen)
+b = CellBoard(screen, True, True)
+b.fillCell(0, 1)
 
 while True:
     for event in pygame.event.get():

@@ -28,6 +28,14 @@ def main():
             # Getting all of the verticies
             self.verts = [(x+X/2, y+Y/2, z+Z/2) for X,Y,Z in self.verticies]
 
+    class Obj3d(pygame.sprite.Sprite):
+        def __init__(self, verts, edges, faces, colors):
+            pgame.sprite.Sprite.__init__(self)
+
+            self.verts = verts
+            self.edges = faces
+            self.colors = colors
+
     class Crosshair(pygame.sprite.Sprite):
         def __init__(self, screen, color=(192,192,192), width=12, height=12, thickness=2, centergap=6):
             pygame.sprite.Sprite.__init__(self)
@@ -146,11 +154,13 @@ def main():
             self.faces = [(0, 1, 2, 3), (4, 5, 6, 7), (0, 1, 5 , 4), (2, 3, 7 ,6), (0, 3, 7, 4), (1, 2, 6, 5)]
 
         def readfile(self, filename):
+            # The format of the object MUST be "vert_list, edge_list, face_list, color_list" each on separate lines
+
             f = open(filename, "r")
-            cubespos = f.readlines()
+            objline = f.readlines()
             
             # Cube pos
-            positions = [(float(coord) for coord in c.split()) for c in cubespos]
+            positions = [(float(coord) for coord in c.split()) for c in objline]
 
             self.objlist = [Cube(p) for p in positions]
 
