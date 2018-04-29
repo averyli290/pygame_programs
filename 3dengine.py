@@ -1,4 +1,4 @@
-import pygame, sys, math, random 
+import pygame, sys, math, random, re
 
 # FROM YOUTUBE VIDEO https://www.youtube.com/watch?v=g4E9iq0BixA
 # This was learned, not just copied
@@ -30,10 +30,11 @@ def main():
 
     class Obj3d(pygame.sprite.Sprite):
         def __init__(self, verts, edges, faces, colors):
-            pgame.sprite.Sprite.__init__(self)
+            pygame.sprite.Sprite.__init__(self)
 
             self.verts = verts
-            self.edges = faces
+            self.edges = edges
+            self.faces = faces
             self.colors = colors
 
     class Crosshair(pygame.sprite.Sprite):
@@ -154,15 +155,53 @@ def main():
             self.faces = [(0, 1, 2, 3), (4, 5, 6, 7), (0, 1, 5 , 4), (2, 3, 7 ,6), (0, 3, 7, 4), (1, 2, 6, 5)]
 
         def readfile(self, filename):
-            # The format of the object MUST be "vert_list, edge_list, face_list, color_list" each on separate lines
+            # The format of the object MUST be "vert_list, edge_list, face_list, color_list"
 
-            f = open(filename, "r")
-            objline = f.readlines()
+            vstep0 = []
+            estep0 = []
+            fstep0 = []
+            cstep0 = []
+
+            with open(filename+"verts.txt", "r") as v:
+                for line in v:
+                    vstep0.append(line)
+
+            with open(filename+"edges.txt", "r") as e:
+                for line in e:
+                    estep0.append(line)
+
+            with open(filename+"faces.txt", "r") as f: 
+                for line in f:
+                    fstep0.append(line)
+
+            with open(filename+"colors.txt", "r") as c: 
+                for line in c:
+                    cstep0.append(line)
+
+            vstep1 = [re.split(";", str(val)) for val in vstep0]
+            estep1 = [re.split(";", str(val)) for val in estep0]
+            fstep1 = [re.split(";", str(val)) for val in fstep0]
+            cstep1 = [re.split(";", str(val)) for val in cstep0]
+                
+            vstep2 = [[re.sub(r"[^0-9\.\,\(\)]", "", val) for val in val0] for val0 in vstep1]
+            estep2 = [[re.sub(r"[^0-9\.\,\(\)]", "", val) for val in val0] for val0 in estep1]
+            fstep2 = [[re.sub(r"[^0-9\.\,\(\)]", "", val) for val in val0] for val0 in fstep1]
+            cstep2 = [[re.sub(r"[^0-9\.\,\(\)]", "", val) for val in val0] for val0 in cstep1]
+
+            vstep3 = [[val for val in val0 if val != ""] for val0 in vstep2]
+            estep3 = [[val for val in val0 if val != ""] for val0 in estep2]
+            fstep3 = [[val for val in val0 if val != ""] for val0 in fstep2]
+            cstep3 = [[val for val in val0 if val != ""] for val0 in cstep2]
+
+            vstep4 = [[eval(val) for val in val0] for val0 in vstep3]
+            estep4 = [[eval(val) for val in val0] for val0 in estep3]
+            fstep4 = [[eval(val) for val in val0] for val0 in fstep3]
+            cstep4 = [[eval(val) for val in val0] for val0 in cstep3]
+
+            self.objlist = []
             
-            # Cube pos
-            positions = [(float(coord) for coord in c.split()) for c in objline]
-
-            self.objlist = [Cube(p) for p in positions]
+            for i in range(len(vstep4)):
+                self.objlist.append(Obj3d(vstep4[i], estep4[i], fstep4[i], cstep4[i]))
 
         def rotate2d(self, pos, rad):
             # Based on unit circle (counterclockwise)
@@ -247,15 +286,6 @@ def main():
             # Clearing the screen
             screen.fill(self.bgcolor)
             
-            ''' 
-            # Rendering faces
-            face_list = []
-            # Distance from player (to sort the face rendering)
-            distance_list = []
-            # The colors for each face
-            color_list = []
-            '''
-
             # Stores all face data
             face_list = []; distance_list = []; color_list = []
             
@@ -319,7 +349,7 @@ def main():
 
     #p = Player(screen, (0, 255, 255), (0, 0, 70), [Cube((0, 0, 0)), Cube((0, 0, 1)), Cube((1, 0, 0))])
     p = Player(screen, (0, 255, 255), (0, 0, 70))
-    p.readfile("test.txt")
+    p.readfile("test")
     while True:
         p.handle_keys()
         pygame.display.flip()

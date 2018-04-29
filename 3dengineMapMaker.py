@@ -1,5 +1,7 @@
 from CellBoard import CellBoard
 import pygame, sys
+from copy import deepcopy
+import random
 
 size = x, y = 1440, 900
 screen = pygame.display.set_mode((size))
@@ -37,12 +39,41 @@ class MapLevel(CellBoard):
         CellBoard.__init__(self, surface, borders, verts, cellwidth, cellheight, boardwidth, boardheight)
 
         # For connecting verticies
-        self.edges = []
+        self.lines= []
 
-    def connectVerts(x1, y1, x2, y2):
+    def connectVerts(self, x1, y1, x2, y2):
         if self.validVert(x1, y1) and self.validVert(x2, y2):
-            self.edges.append((x1, y1, x2, y2))
-        # Finish this 
+            # Adding the edges to the list for updating later
+            self.lines.append(((x1, y1), (x2, y2)))
+            # Converting to screen coords
+            screenx1 = x1*self.cellwidth
+            screeny1 = y1*self.cellheight
+            screenx2 = x2*self.cellwidth
+            screeny2 = y2*self.cellheight
+            return True
+        return False
+
+    def redraw(self):
+        for l in self.celllist:
+            for cell in l:
+                cell.drawCell()
+
+        try:
+            for l in self.vertlist:
+                for vert in l:
+                    vert.drawCell()
+
+        except:
+            pass
+    
+        for line in self.lines:
+            # Drawing the edges from the format in connectVerts
+            # Converted to screen coords
+            screenx1, screeny1 = line[0]
+            screenx2, screeny2 = line[1]
+            screenx1, screeny1 = screenx1*self.cellwidth, screeny1*self.cellheight
+            screenx2, screeny2 = screenx2*self.cellwidth, screeny2*self.cellheight
+            pygame.draw.line(self.surface, (0, 255, 0), (screenx1, screeny1), (screenx2, screeny2), 2)
     
 class MapCreator:
     def __init__(self, surface, maplevels=[], cellwidth=20, cellheight=20, boardwidth=25, boardheight=25, borders=True):
@@ -63,6 +94,8 @@ class MapCreator:
         self.boardwidth = boardwidth
         self.boardheight = boardheight
         self.borders = borders
+
+        self.connectqueue = [] 
 
         # Updating the display
         self.update()
@@ -89,8 +122,6 @@ class MapCreator:
                     m = MapLevel(s)
                     self.maplevels.append(m)
 
-                self.update()
-
             elif event.key == pygame.K_DOWN:
                 # Going to previous map level
                 self.cmaplvlindex -= 1
@@ -110,8 +141,6 @@ class MapCreator:
                     # To no go into negative indexes
                     self.cmaplvlindex += 1
 
-                self.update()
-
             elif event.key == pygame.K_p:
                 self.saveMap()
         
@@ -124,8 +153,20 @@ class MapCreator:
                 cellx, celly = cmaplvl.cell_coords(mousex, mousey)
                 cmaplvl.fillCell(cellx, celly, (0, 0, 0))
 
-            # Right mouse click to erase
+            # Right mouse click to place vertex 
             if pygame.mouse.get_pressed() == (0, 0, 1):
+                mousex, mousey = event.pos
+                vertx, verty = cmaplvl.vert_coords(mousex, mousey)
+                cmaplvl.fillVert(vertx, verty, (0, 255, 0))
+                self.connectqueue.append((vertx, verty)) 
+                if len(self.connectqueue) == 2:
+                    x1, y1 = self.connectqueue[0]
+                    x2, y2 = self.connectqueue[1]
+                    cmaplvl.connectVerts(x1,y1,x2,y2)
+                    self.connectqueue = [] 
+
+            # Middle mouse click to erase
+            if pygame.mouse.get_pressed() == (0, 1, 0):
                 mousex, mousey = event.pos
                 cellx, celly = cmaplvl.cell_coords(mousex, mousey)
                 cmaplvl.eraseCell(cellx, celly)
@@ -133,7 +174,10 @@ class MapCreator:
     def update(self):
         # Clearing the screen
         self.surface.fill((255, 255, 255))
-               
+        
+        # Updating the current map
+        self.maplevels[self.cmaplvlindex].redraw()
+
         # Displaying the current map
         self.surface.blit(self.maplevels[self.cmaplvlindex].surface, (0, 0))
         
@@ -142,19 +186,86 @@ class MapCreator:
         self.surface.blit(self.maplabelsurf, (1200, 100))
 
     def saveMap(self):
-        filename = "test.txt"
-        f = open(filename, "w")
-
-        # For keeping track of how many the edges/faces should be increment by
-        cubecount = 0
+        # Getting the name of map to load
+        print("Map name: ")
+        filename = str(input())
+        v = open(filename+"verts.txt", "w")
+        e = open(filename+"edges.txt", "w")
+        f = open(filename+"faces.txt", "w")
+        c = open(filename+"colors.txt", "w")
 
         for l in range(len(self.maplevels)):
             level = self.maplevels[l]
+
+            # Detecting cubes
             for i in range(level.boardheight):
                 for j in range(level.boardwidth):
                     if level.celllist[i][j].isFilled:
                         # x, y, z = j, -l, i 
-                        f.write(str(j)+" "+str(-l)+" "+str(i)+"\n")
+                        temp = Cube((j, -l, i))
+                        
+                        # Writing to files
+                        for vert in temp.verts:
+                            v.write(str(vert)+";")
+                        
+                        for edge in temp.edges:
+                            e.write(str(edge)+";")
+
+                        for faces in temp.faces:
+                            f.write(str(faces)+";")
+
+                        for colors in temp.colors:
+                            c.write(str(colors)+";")
+
+                        v.write("\n")
+                        e.write("\n")
+                        f.write("\n")
+                        c.write("\n")
+
+            # Detecting other edges
+            for line in level.lines:
+                verts = []; edges = []; faces = []; colors = [];
+                #verts.append((line[0][0], line[0][1], l))
+                #verts.append((line[1][0], line[0][1], l))
+                #verts.append((line[0][0], line[0][1], l+1))
+                #verts.append((line[1][0], line[1][1], l+1))
+
+                verts.append((line[0][1], -l, line[0][0]))
+                verts.append((line[0][1], -l, line[1][0]))
+                verts.append((line[0][1], -l-1, line[0][0]))
+                verts.append((line[1][1], -l-1, line[1][0]))
+                
+                edges.append((0, 1))
+                edges.append((0, 2))
+                edges.append((1, 3))
+                edges.append((2, 3))
+
+                faces = [(0, 1, 3, 2)]
+                
+                colors = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))]
+
+                # Writing to files
+                for vert in verts:
+                    v.write(str(vert)+";")
+                
+                for edge in edges:
+                    e.write(str(edge)+";")
+
+                for faces in faces:
+                    f.write(str(faces)+";")
+
+                for colors in colors:
+                    c.write(str(colors)+";")
+
+                v.write("\n")
+                e.write("\n")
+                f.write("\n")
+                c.write("\n")
+
+        v.close()
+        e.close()
+        f.close()
+        c.close()
 
 s1 = pygame.Surface((502, 502))
 m = MapCreator(screen, [MapLevel(s1)])
@@ -170,5 +281,8 @@ while True:
                 sys.exit()
         
         m.events(event)
+
+    # Updating the display
+    m.update()
 
     pygame.display.flip()
