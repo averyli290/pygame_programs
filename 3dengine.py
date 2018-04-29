@@ -144,6 +144,16 @@ def main():
             #self.faces = [(0,1,4), (0, 1, 6)]
 
             self.faces = [(0, 1, 2, 3), (4, 5, 6, 7), (0, 1, 5 , 4), (2, 3, 7 ,6), (0, 3, 7, 4), (1, 2, 6, 5)]
+
+        def readfile(self, filename):
+            f = open(filename, "r")
+            cubespos = f.readlines()
+            
+            # Cube pos
+            positions = [(float(coord) for coord in c.split()) for c in cubespos]
+
+            self.objlist = [Cube(p) for p in positions]
+
         def rotate2d(self, pos, rad):
             # Based on unit circle (counterclockwise)
             #  X  Y
@@ -297,9 +307,9 @@ def main():
             # Addding in the crosshair
             self.crosshair.redraw()
 
-    p = Player(screen, (0, 255, 255), (0, 0, 70), [Cube((0, 0, 0)), Cube((0, 0, 1)), Cube((1, 0, 0))])
-    p.initializeSetting()
-
+    #p = Player(screen, (0, 255, 255), (0, 0, 70), [Cube((0, 0, 0)), Cube((0, 0, 1)), Cube((1, 0, 0))])
+    p = Player(screen, (0, 255, 255), (0, 0, 70))
+    p.readfile("test.txt")
     while True:
         p.handle_keys()
         pygame.display.flip()
