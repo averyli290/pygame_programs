@@ -231,9 +231,9 @@ class MapCreator:
                 #verts.append((line[1][0], line[1][1], l+1))
 
                 verts.append((line[0][1], -l, line[0][0]))
-                verts.append((line[0][1], -l, line[1][0]))
-                verts.append((line[0][1], -l-1, line[0][0]))
-                verts.append((line[1][1], -l-1, line[1][0]))
+                verts.append((line[1][1], -l, line[1][0]))
+                verts.append((line[0][1], -l+2, line[0][0]))
+                verts.append((line[1][1], -l+2, line[1][0]))
                 
                 edges.append((0, 1))
                 edges.append((0, 2))

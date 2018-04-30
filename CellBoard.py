@@ -120,7 +120,7 @@ class CellBoard:
 
     def eraseCell(self, x, y):
         if self.validCell(x, y):
-            self.celllist[x][y].fill((255,255,255))
+            self.celllist[x][y].clear()
             self.surface.blit(self.boardSurface, (0, 0))
             return True
         return False
@@ -134,7 +134,7 @@ class CellBoard:
 
     def eraseVert(self, x, y):
         if self.validVert(x, y):
-            self.vertlist[x][y].fill((255,255,255))
+            self.vertlist[x][y].clear(255,255,255)
             self.surface.blit(self.boardSurface, (0, 0))
             return True
         return False
