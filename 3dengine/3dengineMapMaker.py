@@ -39,7 +39,29 @@ class MapLevel(CellBoard):
         CellBoard.__init__(self, surface, borders, verts, cellwidth, cellheight, boardwidth, boardheight)
 
         # For connecting verticies
-        self.lines= []
+        self.lines = []
+
+    def eraseVert(self, x, y): # Rewriting the function to erase edges when a vertex is remove
+        # Have to add boolean for returning later
+        valid = False
+
+        # Keeping the old code
+        if self.validVert(x, y):
+            self.vertlist[x][y].clear()
+            valid = True
+            
+        # Adding removing edges
+        if valid:
+            for line in self.lines:
+                if (x, y) in line:
+                    self.lines.remove(line)
+
+            # Now adding blitting because the lines are now updated
+            self.surface.blit(self.boardSurface, (0, 0))
+
+        return valid
+
+
 
     def connectVerts(self, x1, y1, x2, y2):
         if self.validVert(x1, y1) and self.validVert(x2, y2):
@@ -83,9 +105,10 @@ class MapCreator:
         self.maplevels = maplevels
         # (cmaplvl = currentmaplevel)
         self.cmaplvlindex = 0 # Different from the number
-        self.cmaplvlnum = 0
+        self.cmaplvlnum = 0 # Just for cosmetic display
 
         # Making the text for showing the map level
+        self.text = {self}
         self.maplabelsurf, self.maplabelrect = display_text("z axis: 0", 20, pygame.font.get_default_font(), (0,0,0))
         self.surface.blit(self.maplabelsurf, (1200, 100))
 
@@ -100,12 +123,26 @@ class MapCreator:
         # Updating the display
         self.update()
 
+        # 0 = cubes, 1 = verticies/lines (This is a way of using a dictionary to run functions WITH inputs) (pass in x, y, map wanting to edit)
+        self.editmodes = {pygame.K_0: 0, pygame.K_1: 1} # For checking whether the number selected there needs to be the pygame key, but to change the mode, the dictionary is needed
+        self.editmode = 0
+        self.coordFunctions = {0: lambda mx, my, mp: mp.cell_coords(mx, my),
+                               1: lambda mx, my, mp: mp.vert_coords(mx, my)}
+        self.fillFunctions = {0: lambda x, y, mp: mp.fillCell(x, y),
+                              1: lambda x, y, mp: mp.fillVert(x, y, (0, 255, 0))} # Filling the vertexes with green
+        self.eraseFunctions = {0: lambda x, y, mp: mp.eraseCell(x, y),
+                              1: lambda x, y, mp: mp.eraseVert(x, y)}
+        
+
     def events(self, event):
         
         # Getting the current map 
         cmaplvl = self.maplevels[self.cmaplvlindex]
 
         if event.type == pygame.KEYDOWN:
+            
+            # Going between different levels (z-axis) of map
+
             if event.key == pygame.K_UP:
                 # Going to the next map level
                 self.cmaplvlindex += 1
@@ -141,35 +178,48 @@ class MapCreator:
                     # To no go into negative indexes
                     self.cmaplvlindex += 1
 
+            # Saving the map
             elif event.key == pygame.K_p:
                 self.saveMap()
+
+            # Switching between editing modes
+            elif event.key in self.editmodes:
+                # Modifying the edit mode (if confused, look at the self.editmodes dictionary)
+                self.editmode = self.editmodes[event.key] 
         
-        # Drawing/placing objects
-        # Add drawing with verts
+            # Drawing/placing objects
         elif event.type == pygame.MOUSEMOTION or event.type == pygame.MOUSEBUTTONDOWN:
-            # Left mouse click to place cube 
+            # Left mouse click to place
             if pygame.mouse.get_pressed() == (1, 0, 0):
                 mousex, mousey = event.pos
-                cellx, celly = cmaplvl.cell_coords(mousex, mousey)
-                cmaplvl.fillCell(cellx, celly, (0, 0, 0))
+                # Getting the coords in the board from running a function from a dictionary
+                x, y = self.coordFunctions[self.editmode](mousex, mousey, cmaplvl)
 
-            # Right mouse click to place vertex 
+                # Now filling it
+                self.fillFunctions[self.editmode](x, y, cmaplvl)
+
+                # For placing verticies
+                if self.editmode == 1:
+                    # Adding the vertex to the queue (if proper vertex)
+                    if cmaplvl.validVert(x, y):
+                        self.connectqueue.append((x, y))
+                    if len(self.connectqueue) == 2:
+                        x1, y1 = self.connectqueue[0]
+                        x2, y2 = self.connectqueue[1]
+                        cmaplvl.connectVerts(x1,y1,x2,y2)
+                        # Resetting the connectqueue so we can draw more lines
+                        self.connectqueue = []
+
+            # Right mouse to erase
             if pygame.mouse.get_pressed() == (0, 0, 1):
                 mousex, mousey = event.pos
-                vertx, verty = cmaplvl.vert_coords(mousex, mousey)
-                cmaplvl.fillVert(vertx, verty, (0, 255, 0))
-                self.connectqueue.append((vertx, verty)) 
-                if len(self.connectqueue) == 2:
-                    x1, y1 = self.connectqueue[0]
-                    x2, y2 = self.connectqueue[1]
-                    cmaplvl.connectVerts(x1,y1,x2,y2)
-                    self.connectqueue = [] 
+                # Getting the coords in the board from running a function from a dictionary
+                x, y = self.coordFunctions[self.editmode](mousex, mousey, cmaplvl)
+                # Now erasing it
+                self.eraseFunctions[self.editmode](x, y, cmaplvl)
 
-            # Middle mouse click to erase
-            if pygame.mouse.get_pressed() == (0, 1, 0):
-                mousex, mousey = event.pos
-                cellx, celly = cmaplvl.cell_coords(mousex, mousey)
-                cmaplvl.eraseCell(cellx, celly)
+                # This assumes that when erasing, the user will want to reclick the verticies again, so clearing the queue
+                self.connectqueue = []
 
     def update(self):
         # Clearing the screen
@@ -201,9 +251,12 @@ class MapCreator:
             for i in range(level.boardheight):
                 for j in range(level.boardwidth):
                     if level.celllist[i][j].isFilled:
-                        # x, y, z = j, -l, i 
-                        temp = Cube((j, -l, i))
-                        
+                        x, y, z = -j, l, i 
+                        x += 0.5
+                        y -= 0.5
+                        z += 0.5
+                        temp = Cube((x, -y, z))
+
                         # Writing to files
                         for vert in temp.verts:
                             v.write(str(vert)+";")
@@ -225,15 +278,11 @@ class MapCreator:
             # Detecting other edges
             for line in level.lines:
                 verts = []; edges = []; faces = []; colors = [];
-                #verts.append((line[0][0], line[0][1], l))
-                #verts.append((line[1][0], line[0][1], l))
-                #verts.append((line[0][0], line[0][1], l+1))
-                #verts.append((line[1][0], line[1][1], l+1))
 
                 verts.append((line[0][1], -l, line[0][0]))
                 verts.append((line[1][1], -l, line[1][0]))
-                verts.append((line[0][1], -l+2, line[0][0]))
-                verts.append((line[1][1], -l+2, line[1][0]))
+                verts.append((line[0][1], -l+1, line[0][0]))
+                verts.append((line[1][1], -l+1, line[1][0]))
                 
                 edges.append((0, 1))
                 edges.append((0, 2))
