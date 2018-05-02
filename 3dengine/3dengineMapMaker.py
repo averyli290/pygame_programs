@@ -1,7 +1,7 @@
 from CellBoard import CellBoard
 import pygame, sys
 from copy import deepcopy
-import random
+import random, numpy, math
 
 size = x, y = 1440, 900
 screen = pygame.display.set_mode((size))
@@ -64,7 +64,7 @@ class MapLevel(CellBoard):
 
 
     def connectVerts(self, x1, y1, x2, y2):
-        if self.validVert(x1, y1) and self.validVert(x2, y2):
+        if self.validVert(x1, y1) and self.validVert(x2, y2) and (x1, y1) != (x2, y2):
             # Adding the edges to the list for updating later
             self.lines.append(((x1, y1), (x2, y2)))
             # Converting to screen coords
@@ -198,13 +198,21 @@ class MapCreator:
                     # Adding the vertex to the queue (if proper vertex)
                     if cmaplvl.validVert(x, y):
                         self.connectqueue.append((x, y))
+                    else:
+                        if len(self.connectqueue) == 1: # If clicking outside, clearing the queue
+                            x1, y1 = self.connectqueue[0]
+                            cmaplvl.eraseVert(x1, y1)
+                            self.connectqueue = []
+
                     # Checking to see if to create line
                     if len(self.connectqueue) == 2:
                         x1, y1 = self.connectqueue[0]
                         x2, y2 = self.connectqueue[1]
-                        cmaplvl.connectVerts(x1,y1,x2,y2)
+                        if cmaplvl.connectVerts(x1,y1,x2,y2) == False: # If not successfull
+                            cmaplvl.eraseVert(x1, y1)
                         # Resetting the connectqueue so we can draw more lines
                         self.connectqueue = []
+                    print(self.connectqueue)
 
             # Right mouse to erase
             if pygame.mouse.get_pressed() == (0, 0, 1):
@@ -276,11 +284,13 @@ class MapCreator:
             # Detecting other edges
             for line in level.lines:
                 verts = []; edges = []; faces = []; colors = [];
+
+                x1, y1, x2, y2 = line[0][1], line[0][0], line[1][1], line[1][0]
                 
-                verts.append((line[0][1], -l, line[0][0]))
-                verts.append((line[1][1], -l, line[1][0]))
-                verts.append((line[0][1], -l+1, line[0][0]))
-                verts.append((line[1][1], -l+1, line[1][0]))
+                verts.append((x1, -l, y1))
+                verts.append((x2, -l, y2))
+                verts.append((x1, -l+1, y1))
+                verts.append((x2, -l+1, y2))
                 
                 edges.append((0, 1))
                 edges.append((0, 2))
@@ -288,6 +298,16 @@ class MapCreator:
                 edges.append((2, 3))
 
                 faces = [(0, 1, 3, 2)]
+                
+                # TO BE WORKED ON 
+                # Based on color wheel
+                length, height = abs(x1-x2), abs(y1-y2)
+                hyp = math.sqrt(length**2+height**2)
+                angle = math.acos(length/hyp)*180/(2*math.pi)
+                # Red at (degrees) 0, Green at 120, Blue at 240
+                r = 255*(abs(0-angle)/120)
+                g = 255*(abs(120-angle)/120)
+                b = 255*(abs(240-angle)/120)
                 
                 colors = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))]
 
