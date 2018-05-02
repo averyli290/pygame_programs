@@ -41,9 +41,9 @@ def main():
         def __init__(self, screen, color=(192,192,192), width=12, height=12, thickness=2, centergap=6):
             pygame.sprite.Sprite.__init__(self)
 
-            # surface that crosshair will be on
-            self.surface = pygame.Surface((width*2+centergap, height*2+centergap))
-            # making it transparent
+            # Surface that crosshair will be on
+            self.surface = pygame.Surface(((width*2+centergap, height*2+centergap)))
+            # Making it transparent
             self.surface.set_colorkey((0, 0, 0))
 
             self.screen = screen
@@ -53,6 +53,14 @@ def main():
             self.height = height
             self.thickness = thickness
             self.centergap = centergap 
+            
+            # For collision detection with targets
+            self.chcenterlength = 1 # Width and height of the rectangle is going to be checked for collision detection
+            self.image = pygame.Surface((self.chcenterlength, self.chcenterlength))
+            self.image.fill((0, 0, 0))
+            self.rect = self.image.get_rect()
+            # Adding in the crosshair (it is invis because colorkey = (0,0,0))
+            self.surface.blit(self.image, ((width*2-self.chcenterlength)/2, (height*2-self.chcenterlength)/2))
 
             self.totalwidth = self.width*2
             self.totalheight = self.height*2
@@ -350,10 +358,10 @@ def main():
     #p = Player(screen, (0, 255, 255), (0, 0, 70), [Cube((0, 0, 0)), Cube((0, 0, 1)), Cube((1, 0, 0))])
     p = Player(screen, (0, 255, 255), (0, 0, 70))
     p.readfile("test")
+
     while True:
         p.handle_keys()
         pygame.display.flip()
-        #p.renderFaces()
 
 
 main()

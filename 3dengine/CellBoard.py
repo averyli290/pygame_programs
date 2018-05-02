@@ -5,7 +5,6 @@ class Cell(pygame.sprite.Sprite):
 
         pygame.sprite.Sprite.__init__(self)
 
-        self.isFilled = False if color != None else True
         self.surface = surface 
         self.topleft = topleft
         self.width = width
@@ -73,13 +72,13 @@ class CellBoard:
         # Initializing cells
         
         # This works
-        #celllist = [[Cell(self.boardSurface, (255,255,255), (i*self.cellwidth, j*self.cellheight), self.cellwidth, self.cellheight) for j in range(self.boardheight)] for i in range(self.boardwidth)]
+        #celllist = [[Cell(self.boardSurface, (255,255,255), (i*self.cellwidth, j*self.cellheight), self.cellwidth, self.cellheight, self.borders) for j in range(self.boardheight)] for i in range(self.boardwidth)]
         
         for i in range(self.boardwidth):
             celllist.append([])
             for j in range(self.boardheight):
                 x, y = i*self.cellwidth, j*self.cellheight
-                celllist[i].append(Cell(self.boardSurface, (255,255,255), (x, y), self.cellwidth, self.cellheight))
+                celllist[i].append(Cell(self.boardSurface, (255,255,255), (x, y), self.cellwidth, self.cellheight, self.borders))
 
         # Adding the board to the surface given  
         self.surface.blit(self.boardSurface, (0, 0))
@@ -182,12 +181,13 @@ class CellBoard:
 # TEST CODE #
 #############
 
-'''
+
 
 size = width, height = 1440, 900
 screen = pygame.display.set_mode((size))
 screen.fill((255,255,255))
 
+'''
 
 b = CellBoard(screen, True, True)
 b.fillCell(0, 1)

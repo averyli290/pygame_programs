@@ -52,7 +52,7 @@ class MapLevel(CellBoard):
             
         # Adding removing edges
         if valid:
-            for line in self.lines:
+            for line in self.lines[::-1]: # Have to reverse when removing things or else the length of the list will change causing skipping every other time, reversing keeps the old order in the part of the list untouched
                 if (x, y) in line:
                     self.lines.remove(line)
 
@@ -107,11 +107,6 @@ class MapCreator:
         self.cmaplvlindex = 0 # Different from the number
         self.cmaplvlnum = 0 # Just for cosmetic display
 
-        # Making the text for showing the map level
-        self.text = {self}
-        self.maplabelsurf, self.maplabelrect = display_text("z axis: 0", 20, pygame.font.get_default_font(), (0,0,0))
-        self.surface.blit(self.maplabelsurf, (1200, 100))
-
         self.cellwidth = cellwidth
         self.cellheight = cellheight
         self.boardwidth = boardwidth
@@ -131,7 +126,7 @@ class MapCreator:
         self.fillFunctions = {0: lambda x, y, mp: mp.fillCell(x, y),
                               1: lambda x, y, mp: mp.fillVert(x, y, (0, 255, 0))} # Filling the vertexes with green
         self.eraseFunctions = {0: lambda x, y, mp: mp.eraseCell(x, y),
-                              1: lambda x, y, mp: mp.eraseVert(x, y)}
+                               1: lambda x, y, mp: mp.eraseVert(x, y)}
         
 
     def events(self, event):
@@ -203,6 +198,7 @@ class MapCreator:
                     # Adding the vertex to the queue (if proper vertex)
                     if cmaplvl.validVert(x, y):
                         self.connectqueue.append((x, y))
+                    # Checking to see if to create line
                     if len(self.connectqueue) == 2:
                         x1, y1 = self.connectqueue[0]
                         x2, y2 = self.connectqueue[1]
@@ -250,12 +246,14 @@ class MapCreator:
             # Detecting cubes
             for i in range(level.boardheight):
                 for j in range(level.boardwidth):
-                    if level.celllist[i][j].isFilled:
-                        x, y, z = -j, l, i 
-                        x += 0.5
-                        y -= 0.5
+                    if level.celllist[i][j].isFilled():
+                        # Converting from array to coords
+                        x, y, z = -j, -l, i
+                        # Translating the point so it is at the proper location ((x, y, z) is the center)
+                        x -= 0.5
+                        y += 1.5
                         z += 0.5
-                        temp = Cube((x, -y, z))
+                        temp = Cube((x, y, z))
 
                         # Writing to files
                         for vert in temp.verts:
@@ -278,7 +276,7 @@ class MapCreator:
             # Detecting other edges
             for line in level.lines:
                 verts = []; edges = []; faces = []; colors = [];
-
+                
                 verts.append((line[0][1], -l, line[0][0]))
                 verts.append((line[1][1], -l, line[1][0]))
                 verts.append((line[0][1], -l+1, line[0][0]))
