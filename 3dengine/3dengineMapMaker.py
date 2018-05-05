@@ -1,7 +1,7 @@
 from CellBoard import CellBoard
 import pygame, sys
 from copy import deepcopy
-import random, numpy, math
+import random, math
 
 size = x, y = 1440, 900
 screen = pygame.display.set_mode((size))
@@ -212,7 +212,6 @@ class MapCreator:
                             cmaplvl.eraseVert(x1, y1)
                         # Resetting the connectqueue so we can draw more lines
                         self.connectqueue = []
-                    print(self.connectqueue)
 
             # Right mouse to erase
             if pygame.mouse.get_pressed() == (0, 0, 1):
@@ -261,6 +260,8 @@ class MapCreator:
                         x -= 0.5
                         y += 1.5
                         z += 0.5
+                        
+
                         temp = Cube((x, y, z))
 
                         # Writing to files
@@ -285,7 +286,10 @@ class MapCreator:
             for line in level.lines:
                 verts = []; edges = []; faces = []; colors = [];
 
-                x1, y1, x2, y2 = line[0][1], line[0][0], line[1][1], line[1][0]
+                #x1, y1, x2, y2 = line[0][1], line[0][0], line[1][1], line[1][0]
+                x1, y1, x2, y2 = line[1][1], line[1][0], line[0][1], line[0][0]
+                
+                # Translating in y axis by 1 to line up with cubes
                 
                 verts.append((x1, -l, y1))
                 verts.append((x2, -l, y2))
