@@ -179,7 +179,6 @@ class CellBoard:
             pass
 
         # Reblitting the board to the surface
-
         self.surface.blit(self.boardSurface, (0, 0))
 
 #############

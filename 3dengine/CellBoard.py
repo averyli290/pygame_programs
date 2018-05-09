@@ -5,6 +5,7 @@ class Cell(pygame.sprite.Sprite):
 
         pygame.sprite.Sprite.__init__(self)
 
+        self.isFilled = False if color != None else True
         self.surface = surface 
         self.topleft = topleft
         self.width = width
@@ -20,7 +21,7 @@ class Cell(pygame.sprite.Sprite):
         self.hbdwidth = self.height/10
         if border: self.cellfill = pygame.Surface((self.width-self.hbdwidth, self.height-self.wbdwidth))
         else: self.cellfill = pygame.Surface((self.width, self.height))
-        self.cellfill.fill((255, 255, 255))
+        self.cellfill.fill(color)
         self.drawCell()
 
         self.rect = self.image.get_rect()
@@ -177,19 +178,22 @@ class CellBoard:
         except:
             pass
 
+        # Reblitting the board to the surface
+
+        self.surface.blit(self.boardSurface, (0, 0))
+
 #############
 # TEST CODE #
 #############
 
 
-
+'''
 size = width, height = 1440, 900
 screen = pygame.display.set_mode((size))
 screen.fill((255,255,255))
 
-'''
 
-b = CellBoard(screen, True, True)
+b = CellBoard(screen, False, False)
 b.fillCell(0, 1)
 
 while True:
@@ -203,6 +207,5 @@ while True:
                 sys.exit()
 
     pygame.display.flip()
-
 '''
 

@@ -289,12 +289,12 @@ class MapCreator:
                 #x1, y1, x2, y2 = line[0][1], line[0][0], line[1][1], line[1][0]
                 x1, y1, x2, y2 = line[1][1], line[1][0], line[0][1], line[0][0]
                 
-                # Translating in y axis by 1 to line up with cubes
+                # Translating in y axis by -1 (y axis points down) to line up with cubes
                 
+                verts.append((x1, -l-1, y1))
+                verts.append((x2, -l-1, y2))
                 verts.append((x1, -l, y1))
                 verts.append((x2, -l, y2))
-                verts.append((x1, -l+1, y1))
-                verts.append((x2, -l+1, y2))
                 
                 edges.append((0, 1))
                 edges.append((0, 2))

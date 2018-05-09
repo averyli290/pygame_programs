@@ -90,7 +90,7 @@ def main():
             self.screen.blit(self.surface, ((self.screen.get_width()-self.totalwidth)/2, (self.screen.get_height()-self.totalheight)/2))
 
     class Player(pygame.sprite.Sprite):
-        def __init__(self, screen, color, bgcolor, playerHeight=1.5, pos=(0,0,0), viewdistance=75, objlist=[], rot=(0, 0), verts=[], edges=[], faces=[]):
+        def __init__(self, screen, color, bgcolor, playerHeight=1.5, pos=(0,0,0), viewdistance=70, objlist=[], rot=(0, 0), verts=[], edges=[], faces=[]):
             pygame.sprite.Sprite.__init__(self)
 
             self.color = color
