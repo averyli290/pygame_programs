@@ -167,19 +167,7 @@ class CellBoard:
         return (-1, -1)
     
     def redraw(self):
-        for l in self.celllist:
-            for cell in l:
-                cell.drawCell()
-        
-        try:
-            for l in self.vertlist:
-                for vert in l:
-                    vert.drawCell()
-        except:
-            pass
-
         # Reblitting the board to the surface
-
         self.surface.blit(self.boardSurface, (0, 0))
 
 #############

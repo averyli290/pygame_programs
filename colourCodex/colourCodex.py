@@ -1,13 +1,14 @@
 import pygame, sys
+import math
 from CellBoard import CellBoard, Cell
 
 pygame.init()
-screen_width, screen_height = size = 850, 750
+screen_width, screen_height = size = 754, 754
 screen = pygame.display.set_mode(size)
 
 
 class Block(Cell):
-    defaultcolor = (38, 38, 38) # Default color is dark grey
+    defaultcolor = (169,169,169) # Default color is light grey
 
     def __init__(self, surface, color=(255, 255, 255), topLeft=(0, 0), width=20, height=20, border=True):
         Cell.__init__(self, surface, color, topLeft, width, height, border)
@@ -25,8 +26,8 @@ class Block(Cell):
         
 
 class MapLevel(CellBoard):
-    def __init__(self, surface):
-        CellBoard.__init__(self, surface)
+    def __init__(self, surface, borders=True, verts=False, cellwidth=20, cellheight=20, boardwidth=25, boardheight=25):
+        CellBoard.__init__(self, surface, borders, verts, cellwidth, cellheight, boardwidth, boardheight)
 
     def initializeBoard(self): # Overriding to instead use Block class
         celllist = []
@@ -36,7 +37,7 @@ class MapLevel(CellBoard):
             for j in range(self.boardheight):
                 x, y = i*self.cellwidth, j*self.cellheight
                 # Setting it with default color
-                b = Block(self.boardSurface, (38, 38, 38), (x, y), self.cellwidth, self.cellheight, self.borders)
+                b = Block(self.boardSurface, (169, 169, 169), (x, y), self.cellwidth, self.cellheight, self.borders)
                 celllist[i].append(b)
         
         self.surface.blit(self.boardSurface, (0, 0))
@@ -45,9 +46,8 @@ class MapLevel(CellBoard):
 
 
 class Player(pygame.sprite.Sprite):
-    # Golden ratio for width and height
-    orig_width = 40
-    orig_height = 31 
+    orig_width = 30 
+    orig_height = 30 
 
     image = pygame.Surface((orig_width, orig_height))
     image.fill((255, 255, 255))
@@ -69,7 +69,9 @@ class Player(pygame.sprite.Sprite):
         self.pheight = self.orig_height
         self.dx = self.clock.tick(60)/self.timediv
         self.dy = 0
-        self.pscale = 1# For growth
+        self.dir = 0 # Based on unit circle
+        self.pscale = 1 # For growth
+        self.statuses = [1] # For different speeds, sizes, etc
     
         # Image values
         self.cx = self.px+self.orig_width//2
@@ -118,6 +120,7 @@ class Player(pygame.sprite.Sprite):
 
         self.dx = 0
         self.dy = -dt
+        self.dir = math.pi/2
 
     def down(self, dt):
         # Updating dimensions depending on movement direction
@@ -126,6 +129,7 @@ class Player(pygame.sprite.Sprite):
 
         self.dx = 0
         self.dy = dt
+        self.dir = 3*math.pi/2
 
     def left(self, dt):
         # Updating dimensions depending on movement direction
@@ -134,6 +138,7 @@ class Player(pygame.sprite.Sprite):
 
         self.dx = -dt
         self.dy = 0
+        self.dir = math.pi
 
     def right(self, dt):
         # Updating dimensions depending on movement direction
@@ -142,6 +147,19 @@ class Player(pygame.sprite.Sprite):
 
         self.dx = dt
         self.dy = 0 
+        self.dir = 0
+
+    def applySpeedUp(self):
+        self.statuses[0] = 1.5
+
+    def applyRegulateSpeed(self):
+        self.statuses[0] = 1
+
+    def applyShrinkSize(self):
+        self.pscale = 0.8 
+
+    def applyRegulateSize(self):
+        self.pscale = 1
 
     def update(self):
         # Clearing the screen
@@ -154,14 +172,15 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.Surface((self.pwidth, self.pheight))
         self.image.fill((255,255,255))
         self.rect = self.image.get_rect()
-
-        self.px += self.dx 
-        self.py += self.dy
+        
+        # Applying multipliers
+        self.px += self.dx * self.statuses[0]
+        self.py += self.dy * self.statuses[0]
         
         self.rect.center = (self.px, self.py)
 
 
-m = MapLevel(screen)
+m = MapLevel(screen, True, False, 25, 25, 25, 25)
 maplist = [m]
 p1 = Player(screen, maplist, [(0, 0)], 0, (123, 123, 123))
 playerSprite = pygame.sprite.Group()
