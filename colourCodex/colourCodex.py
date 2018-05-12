@@ -269,13 +269,13 @@ class Player(pygame.sprite.Sprite):
         self.dx = 0
         self.dy = 0
 
-        # Spawn/Death animation (in 45 steps)
-        for i in range(45):
+        # Spawn/Death animation (in 30 steps)
+        for i in range(30):
             # Modifying scale (shrinking if death, growwing if spawning)
             if spawn:
-                self.parameters[1] = i/45*self.prev_scale
+                self.parameters[1] = i/30*self.prev_scale
             else:
-                self.parameters[1] = (45-i)/45*self.prev_scale
+                self.parameters[1] = (30-i)/30*self.prev_scale
 
             # Updating dimensions
             self.pwidth = self.currentbase_width*self.parameters[1]
@@ -344,7 +344,7 @@ m.fillCell(15, 15, p1.colordict["purple"])
 m.fillCell(17, 10, p1.colordict["orange"])
 m.fillCell(10, 10, p1.colordict["black"])
 
-#p1.initializeMap(0)
+p1.initializeMap(0)
 
 screen.fill((0, 0, 0)) # Clearing screen completely before starting
 
