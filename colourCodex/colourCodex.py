@@ -26,13 +26,14 @@ class Block(Cell):
         
 
 class MapLevel(CellBoard):
-    def __init__(self, surface, borders=True, verts=False, cellwidth=20, cellheight=20, boardwidth=25, boardheight=25, bordercolor=(100, 100, 100), defaultBlockColor=(170, 170, 170)): # The border color is light gray
+    def __init__(self, surface, startPos=(0, 0), borders=True, verts=False, cellwidth=20, cellheight=20, boardwidth=25, boardheight=25, bordercolor=(100, 100, 100), defaultBlockColor=(170, 170, 170)): # The border color is light gray
 
         # Needed for collision detection with blocks later
         self.defaultBlockColor = defaultBlockColor
 
         CellBoard.__init__(self, surface, borders, verts, cellwidth, cellheight, boardwidth, boardheight, bordercolor)
-
+        
+        self.startPos = startPos
 
     def initializeBoard(self): # Overriding to instead use Block class
         celllist = []
@@ -50,6 +51,38 @@ class MapLevel(CellBoard):
 
         return celllist
 
+
+class MapReader:
+    def __init__(self):
+        pass
+    
+    def readfile(filename):
+        pass
+
+
+class BackgroundHandler:
+    # All pretty much self explanatory
+    def __init__(self, surface, maplist=[]):
+        
+        self.maplist = maplist
+        self.surface = surface
+        self.currentmap = 0
+        self.displayingMap = False
+
+    def renderCurrentMap(self):
+        self.maplist[self.currentmap].redraw()
+
+    def setCurrentMap(self, index):
+        self.currentmap = index
+
+    def getCurrentMap(self):
+        return self.maplist[self.currentmap]
+    
+    def getCurrentMapStartPos(self):
+        return self.maplist[self.currentmap].startPos
+
+    def setDisplayingMap(self, val):
+        self.displayingMap = val
 
 class Player(pygame.sprite.Sprite):
 
@@ -88,16 +121,18 @@ class Player(pygame.sprite.Sprite):
         self.cx = 0
         self.cy = 0
 
+        self.backgroundHandler = BackgroundHandler(self.screen, maplist)
+
         # Other values/things
         self.bgcolor = bgcolor
-        self.maplist = maplist 
         self.startposlist = startposlist
-        self.currentmap = 0
         self.colordict = {"red": (255, 0, 0), # For referencing the name of the color and not have to manually punch in the rgb value
                           "pink": (255, 175, 255),
                           "purple": (185, 0, 255),
                           "orange": (255, 128, 0),
                           "black": (0, 0, 0)}
+
+        self.maplevel = 0
 
         # Dictionary for applying certain effects
         # Without lambda, function always runs at beginning
@@ -105,26 +140,34 @@ class Player(pygame.sprite.Sprite):
                                 self.colordict["pink"]: lambda: self.applyRegulateSpeed(), # Pink - Regulate speed
                                 self.colordict["purple"]: lambda: self.applyShrinkSize(), # Purple - Shrink size
                                 self.colordict["orange"]: lambda: self.applyRegulateSize(), # Orange - Regulate size
-                                self.colordict["black"]: lambda: [self.staticanimation(), self.initializeMap(self.currentmap)] # Black - Wall (kills you!)
+                                self.colordict["black"]: lambda: [self.staticanimation(), self.initializeMap(self.maplevel)] # Black - Wall (kills you!)
                                 }
     
-    def initializeMap(self, mapnum):
-        # Updating map index and player position
-        self.currentmap = mapnum
-        self.px, self.py = self.startposlist[mapnum]
+    def initializeMap(self, index):
+        currentmap = self.backgroundHandler.getCurrentMap() 
+
+        # Getting some values
+        cellwidth = currentmap.cellwidth
+        cellheight = currentmap.cellheight
+
+        # Updating player position, map, and handler values
+        self.backgroundHandler.setCurrentMap(index)
+        cellstartx, cellstarty = self.backgroundHandler.getCurrentMapStartPos() # The cell values
+        self.px, self.py = cellstartx*cellwidth-cellwidth/2, cellstarty*cellheight-cellheight/2 # Converting to pygame coordinates
+        self.backgroundHandler.setDisplayingMap(True)
 
         # Updating player paramaters to default
         self.setAllParamsDefault()        
 
         # Updating player variables
-        self.current_speed = self.orig_speed*self.maplist[self.currentmap].cellwidth/self.usualblockwidth
-        self.pheight = self.maplist[self.currentmap].cellwidth*1.4
-        self.pwidth = self.maplist[self.currentmap].cellwidth*1.4
-        self.cx = self.px+self.pwidth
-        self.cy = self.py+self.pheight
+        self.current_speed = self.orig_speed*currentmap.cellwidth/self.usualblockwidth
+        self.pheight = currentmap.cellwidth*1.4
+        self.pwidth = currentmap.cellheight*1.4
+        self.cx = self.px+self.pwidth-cellwidth
+        self.cy = self.py+self.pheight-cellheight
 
         # Updating the blocksize values
-        self.blockwidth, self.blockheight = self.maplist[self.currentmap].cellwidth, self.maplist[self.currentmap].cellheight
+        self.blockwidth, self.blockheight = currentmap.cellwidth, currentmap.cellheight
         self.currentbase_height = self.blockheight*1.4
         self.currentbase_width = self.blockwidth*1.4
         
@@ -135,20 +178,22 @@ class Player(pygame.sprite.Sprite):
         self.staticanimation(True)
 
     def get_collision(self):
-        cmap = self.maplist[self.currentmap]
+        currentmap = self.backgroundHandler.getCurrentMap() 
 
         collisionList = [] # list of objects colliding
 
-        for i in range(cmap.boardheight):
-            for j in range(cmap.boardwidth):
-                if self.rect.colliderect(cmap.celllist[i][j].rect): # Checking for collision in the squares around it
-                    collisionList.append(cmap.celllist[i][j])
+        for i in range(currentmap.boardheight):
+            for j in range(currentmap.boardwidth):
+                if self.rect.colliderect(currentmap.celllist[i][j].rect): # Checking for collision in the squares around it
+                    collisionList.append(currentmap.celllist[i][j])
 
         return collisionList
 
     def handle_collision(self, block):
         # Handling colliding with blocks
-        if block.color == self.maplist[self.currentmap].defaultBlockColor: # If NOT default color then start checking
+        currentmap = self.backgroundHandler.getCurrentMap() 
+
+        if block.color == currentmap.defaultBlockColor: # If NOT default color then start checking
             return None
         
         # Now checking color for different functions
@@ -166,10 +211,7 @@ class Player(pygame.sprite.Sprite):
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    pygame.quit()
-                    sys.exit()
-                elif event.key == pygame.K_UP:
+                if event.key == pygame.K_UP:
                     self.up(dt)
                 elif event.key == pygame.K_DOWN:
                     self.down(dt)
@@ -178,7 +220,7 @@ class Player(pygame.sprite.Sprite):
                 elif event.key == pygame.K_RIGHT:
                     self.right(dt)
     
-    # Direction change functions (modifies angle, dx, and dy)
+    # Direction change functions (modifies angle, dx, and dy) only runs when NOT in animation
     def up(self, dt):
         self.dx = 0
         self.dy = -dt
@@ -215,13 +257,17 @@ class Player(pygame.sprite.Sprite):
         for i in range(len(self.parameters)):
             self.parameters[i] = 1
 
-    def staticanimation(self, spawn=False):
-        # Resetting dx and dy in order not to move during the death animation
-        self.dx = 0
-        self.dy = 0
+    def clearEventQueue(self):
+        for event in pygame.event.get():
+            pass
 
+    def staticanimation(self, spawn=False):
         # Getting the original scale parameters to not rescale the player if it was previously shrunk 
         self.prev_scale = self.parameters[1]
+
+        # Resetting dx and dy to not move after respawning
+        self.dx = 0
+        self.dy = 0
 
         # Spawn/Death animation (in 45 steps)
         for i in range(45):
@@ -239,7 +285,7 @@ class Player(pygame.sprite.Sprite):
             self.screen.fill(self.bgcolor)
 
             # Redrawing the map
-            self.maplist[self.currentmap].redraw()
+            self.backgroundHandler.getCurrentMap().redraw()
             
             # Updating the dimensions+colors
             self.image = pygame.Surface((self.pwidth, self.pheight))
@@ -251,8 +297,11 @@ class Player(pygame.sprite.Sprite):
             # Updating image
             self.image.fill((255,255,255))
             self.rect = self.image.get_rect()
-            self.maplist[self.currentmap].surface.blit(self.image, (self.px-self.pwidth//2, self.py-self.pheight//2))
+            self.backgroundHandler.surface.blit(self.image, (self.px-self.pwidth//2, self.py-self.pheight//2))
             pygame.display.flip()
+
+        # Clearing the event queue to prevent player from moving right after spawning
+        self.clearEventQueue()
 
     def update(self):
         # Updating dimensions
@@ -263,7 +312,7 @@ class Player(pygame.sprite.Sprite):
         self.screen.fill(self.bgcolor)
 
         # Redrawing the map
-        self.maplist[self.currentmap].redraw()
+        self.backgroundHandler.renderCurrentMap()
 
         # Updating the dimensions+colors
         self.image = pygame.Surface((self.pwidth, self.pheight))
@@ -282,7 +331,7 @@ class Player(pygame.sprite.Sprite):
             p1.handle_collision(block)
 
 
-m = MapLevel(screen, True, False, 25, 25, 25, 25, (100, 100, 100), (170, 170, 170))
+m = MapLevel(screen, (10, 7), True, False, 25, 25, 25, 25, (100, 100, 100), (170, 170, 170))
 maplist = [m]
 
 p1 = Player(screen, maplist, [(100, 100)], 0, (123, 123, 123))
@@ -295,10 +344,13 @@ m.fillCell(15, 15, p1.colordict["purple"])
 m.fillCell(17, 10, p1.colordict["orange"])
 m.fillCell(10, 10, p1.colordict["black"])
 
-p1.initializeMap(0)
+#p1.initializeMap(0)
+
+screen.fill((0, 0, 0)) # Clearing screen completely before starting
 
 while True:
-    p1.handle_keys()
-    p1.update()
+    p1.handle_keys() # Always have to check for quitting
+    if p1.backgroundHandler.displayingMap: # Making sure that they are played
+        p1.update()
     playerSprite.draw(screen) # Drawing the player
     pygame.display.flip()
