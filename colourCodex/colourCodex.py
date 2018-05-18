@@ -126,6 +126,7 @@ class Player(pygame.sprite.Sprite):
         self.colordict = {"red": (255, 0, 0), # For referencing the name of the color and not have to manually punch in the rgb value
                           "pink": (255, 175, 255),
                           "purple": (185, 0, 255),
+                          "lightpurple": (185, 125, 255),
                           "orange": (255, 128, 0),
                           "yellow": (255, 255, 0),
                           "black": (0, 0, 0)}
@@ -137,6 +138,7 @@ class Player(pygame.sprite.Sprite):
         self.effectFunctions = {self.colordict["red"]: lambda: self.applySpeedUp(), # Red - Speed up
                                 self.colordict["pink"]: lambda: self.applyRegulateSpeed(), # Pink - Regulate speed
                                 self.colordict["purple"]: lambda: self.applyShrinkSize(), # Purple - Shrink size
+                                self.colordict["lightpurple"]: lambda: self.applySuperShrinkSize(), # Light Purple - Shrink size
                                 self.colordict["orange"]: lambda: self.applyRegulateSize(), # Orange - Regulate size
                                 self.colordict["yellow"]: lambda: [self.staticanimation(), self.finishLevel()], # Yellow is finish
                                 self.colordict["black"]: lambda: [self.staticanimation(), self.initializeMap(self.maplevel)] # Black - Wall (kills you!)
@@ -146,10 +148,17 @@ class Player(pygame.sprite.Sprite):
         alpharectwidth = screen_width//3
         alpharectheight = screen_height//3
         alpharect = pygame.Surface((alpharectwidth, alpharectheight), pygame.SRCALPHA) # Semi transparent rectangle
-        alpharect.fill((30,30,30,175)) # Dark grey color (30,30,30) + setting the alpha (transparency)
-        self.screen.blit(alpharect, (screen_width//2-alpharectwidth//2, screen_height//2-alpharectheight//2))# Adding it to the screen
-        pygame.display.flip() # Displaying the screen and waiting a couple seconds
-        time.sleep(1)
+
+        # Fading rectangle into screen
+        for f in range(0, 20):
+            alpharect = pygame.Surface((alpharectwidth, alpharectheight), pygame.SRCALPHA) # Semi transparent rectangle
+            alpharect.fill((30,30,30,f)) # Dark grey color (30,30,30) + setting the alpha (transparency)
+            self.screen.blit(alpharect, (screen_width//2-alpharectwidth//2, screen_height//2-alpharectheight//2))# Adding it to the screen
+            pygame.display.flip() # Displaying the screen 
+
+        # Waiting a couple seconds
+        time.sleep(2)
+
         self.backgroundHandler.setMenu()
         pygame.display.flip()
     
@@ -215,9 +224,8 @@ class Player(pygame.sprite.Sprite):
 
     def handle_keys(self):
         # Locking fps
-        self.clock.tick(60)
+        self.clock.tick(250)
         dt = self.current_speed
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -260,7 +268,9 @@ class Player(pygame.sprite.Sprite):
         self.parameters[0] = 1
 
     def applyShrinkSize(self):
-        self.parameters[1] = self.blockheight/self.currentbase_height # Making it so when shrunk, same size as block
+        self.parameters[1] = self.blockheight/self.currentbase_height # Making it so when shrunk,
+    def applySuperShrinkSize(self):
+        self.parameters[1] = (self.blockheight/self.currentbase_height) / 1.25 # Making it so shrunk smaller than block
 
     def applyRegulateSize(self):
         self.parameters[1] = 1
@@ -356,7 +366,7 @@ class Player(pygame.sprite.Sprite):
 
             for row in range(len(tempcolors)):
                 for col in range((len(tempcolors[row]))):
-                    if tempcolors[row][col] == (255, 255, 255):
+                    if tempcolors[row][col] == (255, 255, 255): # If the color is white, set it to defualt color
                         tempcolors[row][col] = (170, 170, 170)
                     toadd.fillCell(tempcoords[row][col][0], tempcoords[row][col][1], tempcolors[row][col])
 

@@ -50,7 +50,7 @@ class MapCreator:
         self.boardheight = boardheight
         self.borders = borders
 
-        self.colorlist = [(0, 0, 0), (255, 175, 255), (255, 0, 0), (185, 0, 255), (255, 128, 0), (255, 255, 0)]
+        self.colorlist = [(0, 0, 0), (255, 175, 255), (255, 0, 0), (185, 0, 255), (185, 125, 255), (255, 128, 0), (255, 255, 0)]
         self.color = (0, 0, 0)
 
         # Updating the display
@@ -86,7 +86,7 @@ class MapCreator:
 
             # Saving the map
             elif event.key == pygame.K_s:
-                print("What would you like to name your maps?: ", end=" ")
+                print("What would you like to name your maps?: ", end="")
                 self.saveMaps(str(input()))
 
             # If number, select color
