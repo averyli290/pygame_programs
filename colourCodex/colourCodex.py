@@ -4,7 +4,7 @@ import time
 from CellBoard import CellBoard, Cell
 
 pygame.init()
-screen_width, screen_height = size = 754, 754
+screen_width, screen_height = size = 625,625
 screen = pygame.display.set_mode(size)
 
 class Block(Cell):
@@ -21,12 +21,12 @@ class Block(Cell):
         self.innercell.fill((self.color))
         self.drawCell()
 
-    def isFilled(self): # Overriding now b.c. defualt color is (38, 38, 38)
+    def isFilled(self): # Overriding now b.c. defualt color is (170, 170, 170)
         return self.color != self.defaultcolor
         
 
 class MapLevel(CellBoard):
-    def __init__(self, surface, startPos=(0, 0), borders=True, verts=False, cellwidth=20, cellheight=20, boardwidth=25, boardheight=25, bordercolor=(100, 100, 100), defaultBlockColor=(170, 170, 170)): # The border color is light gray
+    def __init__(self, surface, startPos=(4, 22), borders=True, verts=False, cellwidth=25, cellheight=25, boardwidth=25, boardheight=25, bordercolor=(100, 100, 100), defaultBlockColor=(170, 170, 170)): # The border color is light gray
 
         # Needed for collision detection with blocks later
         self.defaultBlockColor = defaultBlockColor
@@ -50,15 +50,6 @@ class MapLevel(CellBoard):
         self.surface.blit(self.boardSurface, (0, 0))
 
         return celllist
-
-
-class MapReader:
-    def __init__(self):
-        pass
-    
-    def readfile(filename):
-        pass
-
 
 class BackgroundHandler:
     # All pretty much self explanatory
@@ -84,10 +75,15 @@ class BackgroundHandler:
     def setDisplayingMap(self, val):
         self.displayingMap = val
 
+    def setMenu(self):
+        self.displayingMap = False
+        self.surface.fill((170, 170, 170))
+
 class Player(pygame.sprite.Sprite):
 
     wallcolor = (0, 0, 0) # If crashing into wall, then dead
     usualblockwidth = 25 # For scaling the speed later
+    scalefactor = 1.4 # The scale of player width to block width
 
     def __init__(self, screen, maplist=[], startposlist=[], rotation=0, bgcolor=(0,0,0)):
         pygame.sprite.Sprite.__init__(self)
@@ -96,7 +92,7 @@ class Player(pygame.sprite.Sprite):
 
         # For FPS and timing updates
         self.clock = pygame.time.Clock()
-        self.timediv = 4 # Dividing the tick by this val (less means increase in speed, more means decrease)
+        self.timediv = 5 # Dividing the tick by this val (less means increase in speed, more means decrease)
 
         # Player values
         self.currentbase_width = 0
@@ -106,12 +102,13 @@ class Player(pygame.sprite.Sprite):
         self.py = 0
         self.pwidth = 0 
         self.pheight = 0 
-        self.orig_speed = self.clock.tick(60)/self.timediv
+        self.orig_speed = 4 # approxiamately self.clock.tick(50)/self.timediv
         self.current_speed = 0
         self.dx = 0 
         self.dy = 0
         self.angle = 0 # Based on unit circle (for death animation)
         self.parameters = [1, 1] # Format is [speed, size]
+        self.effectFunctionQueue = set() # For running functions in a queue, a set so duplicates can't be run multiple times
     
         # Image values
         self.image = pygame.Surface((0, 0))
@@ -130,6 +127,7 @@ class Player(pygame.sprite.Sprite):
                           "pink": (255, 175, 255),
                           "purple": (185, 0, 255),
                           "orange": (255, 128, 0),
+                          "yellow": (255, 255, 0),
                           "black": (0, 0, 0)}
 
         self.maplevel = 0
@@ -140,8 +138,20 @@ class Player(pygame.sprite.Sprite):
                                 self.colordict["pink"]: lambda: self.applyRegulateSpeed(), # Pink - Regulate speed
                                 self.colordict["purple"]: lambda: self.applyShrinkSize(), # Purple - Shrink size
                                 self.colordict["orange"]: lambda: self.applyRegulateSize(), # Orange - Regulate size
+                                self.colordict["yellow"]: lambda: [self.staticanimation(), self.finishLevel()], # Yellow is finish
                                 self.colordict["black"]: lambda: [self.staticanimation(), self.initializeMap(self.maplevel)] # Black - Wall (kills you!)
                                 }
+
+    def finishLevel(self):
+        alpharectwidth = screen_width//3
+        alpharectheight = screen_height//3
+        alpharect = pygame.Surface((alpharectwidth, alpharectheight), pygame.SRCALPHA) # Semi transparent rectangle
+        alpharect.fill((30,30,30,175)) # Dark grey color (30,30,30) + setting the alpha (transparency)
+        self.screen.blit(alpharect, (screen_width//2-alpharectwidth//2, screen_height//2-alpharectheight//2))# Adding it to the screen
+        pygame.display.flip() # Displaying the screen and waiting a couple seconds
+        time.sleep(1)
+        self.backgroundHandler.setMenu()
+        pygame.display.flip()
     
     def initializeMap(self, index):
         currentmap = self.backgroundHandler.getCurrentMap() 
@@ -161,21 +171,24 @@ class Player(pygame.sprite.Sprite):
 
         # Updating player variables
         self.current_speed = self.orig_speed*currentmap.cellwidth/self.usualblockwidth
-        self.pheight = currentmap.cellwidth*1.4
-        self.pwidth = currentmap.cellheight*1.4
+        self.pheight = currentmap.cellwidth*self.scalefactor
+        self.pwidth = currentmap.cellheight*self.scalefactor
         self.cx = self.px+self.pwidth-cellwidth
         self.cy = self.py+self.pheight-cellheight
 
         # Updating the blocksize values
         self.blockwidth, self.blockheight = currentmap.cellwidth, currentmap.cellheight
-        self.currentbase_height = self.blockheight*1.4
-        self.currentbase_width = self.blockwidth*1.4
-        
-        # Drawing the new things
-        self.update()
+        self.currentbase_height = self.blockheight*self.scalefactor
+        self.currentbase_width = self.blockwidth*self.scalefactor
         
         # Spawning player
         self.staticanimation(True)
+
+    def runEffectQueue(self):
+        for blockcolor in self.effectFunctionQueue:
+            self.effectFunctions[blockcolor]() # Running each function in the queue
+        
+        self.effectFunctionQueue = set()
 
     def get_collision(self):
         currentmap = self.backgroundHandler.getCurrentMap() 
@@ -186,9 +199,9 @@ class Player(pygame.sprite.Sprite):
             for j in range(currentmap.boardwidth):
                 if self.rect.colliderect(currentmap.celllist[i][j].rect): # Checking for collision in the squares around it
                     collisionList.append(currentmap.celllist[i][j])
-
+        
         return collisionList
-
+    
     def handle_collision(self, block):
         # Handling colliding with blocks
         currentmap = self.backgroundHandler.getCurrentMap() 
@@ -198,8 +211,7 @@ class Player(pygame.sprite.Sprite):
         
         # Now checking color for different functions
         if block.color in self.effectFunctions:
-            # Running function with filler
-            self.effectFunctions[block.color]()
+            self.effectFunctionQueue.add(block.color) # Adding the color to the queue to be run later
 
     def handle_keys(self):
         # Locking fps
@@ -303,6 +315,54 @@ class Player(pygame.sprite.Sprite):
         # Clearing the event queue to prevent player from moving right after spawning
         self.clearEventQueue()
 
+    def readfile(self, filename="levels"):
+        # resetting the maps
+        self.backgroundHandler.maplist = []
+
+        lines = []
+
+        with open(filename+".txt", "r") as f:
+            for line in f:
+                lines.append(line)
+
+        colors = []
+        coords = []
+        
+        # Splitting and adding the lines to the appropriate list
+        for line in lines:
+            if "SPACER" in line:
+                colors.append([])
+                coords.append([])
+            else:
+                s = line.split(";")
+
+                # Changes string tuple into tuple
+                color = eval(s[0])
+                coord = eval(s[1])
+
+                # Checking if to add new line
+                if len(colors[-1]) <= coord[0]:
+                    colors[-1].append([])
+                    coords[-1].append([])
+
+                colors[-1][-1].append(color)
+                coords[-1][-1].append(coord)
+
+        for m in range(len(colors)):
+            toadd = MapLevel(self.screen, (4, 22), True, False, 25, 25, len(colors[m]), len(colors[m][0]))
+            # Adding the colors to the map
+            tempcolors = colors[m]
+            tempcoords = coords[m]
+
+            for row in range(len(tempcolors)):
+                for col in range((len(tempcolors[row]))):
+                    if tempcolors[row][col] == (255, 255, 255):
+                        tempcolors[row][col] = (170, 170, 170)
+                    toadd.fillCell(tempcoords[row][col][0], tempcoords[row][col][1], tempcolors[row][col])
+
+            self.backgroundHandler.maplist.append(toadd)
+
+
     def update(self):
         # Updating dimensions
         self.pwidth = self.currentbase_width*self.parameters[1]
@@ -329,6 +389,7 @@ class Player(pygame.sprite.Sprite):
         blocks = p1.get_collision()
         for block in blocks:
             p1.handle_collision(block)
+        self.runEffectQueue()
 
 
 m = MapLevel(screen, (10, 7), True, False, 25, 25, 25, 25, (100, 100, 100), (170, 170, 170))
@@ -344,6 +405,7 @@ m.fillCell(15, 15, p1.colordict["purple"])
 m.fillCell(17, 10, p1.colordict["orange"])
 m.fillCell(10, 10, p1.colordict["black"])
 
+p1.readfile()
 p1.initializeMap(0)
 
 screen.fill((0, 0, 0)) # Clearing screen completely before starting
