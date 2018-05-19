@@ -49,8 +49,9 @@ class MapCreator:
         self.boardwidth = boardwidth
         self.boardheight = boardheight
         self.borders = borders
-
-        self.colorlist = [(0, 0, 0), (255, 175, 255), (255, 0, 0), (185, 0, 255), (185, 125, 255), (255, 128, 0), (255, 255, 0)]
+        
+        # In order of num keys (0 => (0,0,0, ... , len(colorlist)-1 => colorlist[-1]))
+        self.colorlist = [(128, 128, 128), (0, 0, 0), (255, 175, 255), (255, 0, 0), (185, 0, 255), (185, 125, 255), (255, 128, 0), (0, 255, 0), (78, 46, 40), (255, 255, 0)]
         self.color = (0, 0, 0)
 
         # Updating the display
@@ -130,9 +131,29 @@ class MapCreator:
         self.maplabelsurf, self.maplabelrect = display_text("Level: "+str(self.cmaplvlindex), 20, pygame.font.get_default_font(), (0,0,0))
         self.surface.blit(self.maplabelsurf, (1200, 100))
 
+    def isEmptyMap(self, m):
+        # For clearing empty maps
+        celllist = m.getCelllist()
+        for row in range(len(celllist)):
+            for col in range(len(celllist[row])):
+                if m.isFilledCell(row, col): # Seeing if the cell is filled, it is is, then map is valid, return false
+                    return False
+        return True
+    
+    def clearEmptyMaps(self):
+        # Clearing empty maps
+        toset = []
+
+        for m in self.maplevels:
+            if not self.isEmptyMap(m):
+                toset.append(m) # Append all of the maps that are not empty
+
+        self.maplevels = toset
+
     def saveMaps(self, name):
         f = open(name+".txt", "w")
-
+        
+        self.clearEmptyMaps()
         celllists = [m.getCelllist() for m in self.maplevels]
 
         for celllist in celllists:
@@ -145,9 +166,69 @@ class MapCreator:
                     f.write("\n")
         
         f.close()
+    
+    def readfile(self, filename="levels"):
+        # resetting the maps
+        self.maplevels = []
+
+        lines = []
+
+        with open(filename+".txt", "r") as f:
+            for line in f:
+                lines.append(line)
+
+        colors = []
+        coords = []
+        
+        # Splitting and adding the lines to the appropriate list
+        for line in lines:
+            if "SPACER" in line:
+                colors.append([])
+                coords.append([])
+            else:
+                s = line.split(";")
+
+                # Changes string tuple into tuple
+                color = eval(s[0])
+                coord = eval(s[1])
+
+                # Checking if to add new line
+                if len(colors[-1]) <= coord[0]:
+                    colors[-1].append([])
+                    coords[-1].append([])
+
+                colors[-1][-1].append(color)
+                coords[-1][-1].append(coord)
+
+        for m in range(len(colors)):
+            # Compensating for borders
+            hbdwidth = self.cellheight/10
+            wbdwidth = self.cellwidth/10
+
+            s = pygame.Surface((self.cellwidth*self.boardwidth+hbdwidth, self.cellheight*self.boardheight+wbdwidth))
+            toadd = MapLevel(s, True, False, 20, 20, len(colors[m]), len(colors[m][0]))
+
+            # Adding the colors to the map
+            tempcolors = colors[m]
+            tempcoords = coords[m]
+
+            for row in range(len(tempcolors)):
+                for col in range((len(tempcolors[row]))):
+                    if tempcolors[row][col] not in self.colorlist: # If the color is not recognized in color dictionary, set it to defualt color
+                        tempcolors[row][col] = (255, 255, 255)
+                    elif tempcolors[row][col] == (self.colorlist[0]): # Checking to see if it is the starting position
+                        toadd.startPos = (row, col) # Setting the start position
+
+                    toadd.fillCell(row, col, tempcolors[row][col])
+
+            self.maplevels.append(toadd)
+
+        # Clearing all empty maps
+        self.clearEmptyMaps()
 
 s1 = pygame.Surface((502, 502))
 m = MapCreator(screen, [MapLevel(s1)])
+m.readfile()
 
 while True:
     for event in pygame.event.get():

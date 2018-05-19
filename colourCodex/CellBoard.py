@@ -5,7 +5,6 @@ class Cell(pygame.sprite.Sprite):
 
         pygame.sprite.Sprite.__init__(self)
 
-        self.isFilled = False if color != None else True
         self.surface = surface 
         self.topleft = topleft
         self.width = width
