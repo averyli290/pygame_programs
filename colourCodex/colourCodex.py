@@ -2,6 +2,7 @@ import pygame, sys
 import math
 import time
 import random
+import re
 from CellBoard import CellBoard, Cell
 from Button import Button, TextButton
 
@@ -26,6 +27,7 @@ def display_text(text, size, font, color, rotation=0):
 
 def screen_fade_out(screen, alphacap=60, color=(0,0,0)): # Default color to fade out to is black, 60 is good alpha 
     for alpha in range(0, alphacap, 2):
+        time.sleep(0.01)
         # Covering with darkening rectangle to make it fade out
         bgAlpha = pygame.Surface(screen.get_size())
         bgAlpha.fill(color)
@@ -42,6 +44,7 @@ def screen_fade_in(screen, alphafloor=60, color=(0,0,0)): # Default color to fad
     temprange = temprange[::-1] # Now backwards
 
     for alpha in temprange:
+        time.sleep(0.01)
         # Covering with rectangle to make it fade in 
         bgAlpha = pygame.Surface(screen.get_size())
         bgAlpha.fill(color)
@@ -110,18 +113,27 @@ class BackgroundHandler:
     
     def initializeTextButtons(self):
         self.levelSelectTexts = []
+
+        longestStrLength = len(str(len(self.maplist))) # For adjusting string lengths
+        
+        # Just for getting the shift values
+        testVal = TextButton(self.surface, 0, 0, str(len(self.maplist)), 35)
+        xshift = testVal.image.get_width() * 1.2
+        yshift = testVal.image.get_height() * 1.2
+        buttonsPerRow = int(self.surface.get_width()*3/4 // xshift)
+
         for lvl in range(len(self.maplist)):
+            # Modifying string to fit lengths 
+            lvlStr = "0"*(longestStrLength-len(str(lvl)))+str(lvl)
             # Making x and y coordinates based on how many levels there are
-            x = (lvl % 6 + 1) * 75 # Compensating for spacings 
-            y = (lvl // 6 + 1) * 125 
-            self.levelSelectTexts.append(TextButton(self.surface, x, y, str(lvl), 35)) # Adding the level select to the screen
+            x = (lvl % buttonsPerRow + 1) * xshift # Compensating for spacings 
+            y = (lvl // buttonsPerRow + 1) * yshift 
+            self.levelSelectTexts.append(TextButton(self.surface, x, y, str(lvlStr), 35)) # Adding the level select to the screen
+            self.levelSelectTexts[-1].image = testVal.image.copy() # Resizing to regulate size
 
     # Simple getter and helper functions
     def renderCurrentMap(self):
-        try:
-            self.maplist[self.currentmapnum].redraw()
-        except:
-            self.currentmapnum.redraw()
+        self.maplist[self.currentmapnum].redraw()
 
     def setCurrentMap(self, index):
         self.currentmapnum = index
@@ -133,10 +145,7 @@ class BackgroundHandler:
         return self.currentmapnum
 
     def getCurrentMapStartPos(self):
-        try:
-            return self.maplist[self.currentmapnum].startPos
-        except:
-            return self.currentmapnum.startPos
+        return self.maplist[self.currentmapnum].startPos
 
     def setDisplayingMap(self, val):
         self.displayingLevel = val
@@ -195,7 +204,7 @@ class BackgroundHandler:
         # Checking each level select text to see if it was clicked
         for levelSelectText in self.levelSelectTexts:
             if levelSelectText.isClicked(mx, my):
-                num = eval(levelSelectText.getText()) # Getting the number
+                num = eval(re.sub(r"0([0-9])", "\\1", levelSelectText.getText())) # Getting the number by stripping off the zeroes by using regex then eval
                 return num # Once we have that one thing is clicked, we can disregard the rest
 
         return None
@@ -461,6 +470,7 @@ class Player(pygame.sprite.Sprite):
 
         # Spawn/Death animation (in 30 steps)
         for i in range(30):
+            time.sleep(0.01)
             # Modifying scale (shrinking if death, growwing if spawning)
             if spawn:
                 self.parameters[1] = i/30*self.prev_scale
