@@ -32,6 +32,7 @@ class Button(pygame.sprite.Sprite):
         self.size = size
         self.color = color
         self.alpha = alpha
+        self.hovercolor = tuple([max(0, val-100) for val in self.color])
 
         # Image values
         self.image = pygame.Surface(size)
@@ -46,8 +47,14 @@ class Button(pygame.sprite.Sprite):
         return self.rect.collidepoint(mx, my)
 
     def darken(self):
-        hovercolor = tuple([max(0, val-100) for val in self.color]) # If hovered over, should darken button
-        self.image.fill(hovercolor)
+        self.image.fill(self.hovercolor)
+        self.image.set_alpha(self.alpha)
+        self.redraw()
+
+    def resetColor(self):
+        self.image.fill(self.color)
+        self.image.set_alpha(self.alpha)
+        self.redraw()
 
     def isClicked(self, mx, my):
         return self.rect.collidepoint((mx, my))
@@ -66,6 +73,7 @@ class TextButton(Button):
         self.size = size
         self.color = color
         self.alpha = alpha
+        self.hovercolor = tuple([max(0, val-100) for val in self.color])
         
         # Image values
         self.AlphaSurf, self.TextSurf, self.TextRect = display_text(text, size, pygame.font.get_default_font(), color, alpha, self.imagecolor)

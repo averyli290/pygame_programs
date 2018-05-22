@@ -119,6 +119,11 @@ class MapLevel(CellBoard):
 
 class BackgroundHandler:
     # All pretty much self explanatory
+    # Screen size - (600, 600)
+    buttonTextsDict = {"<": (75, screen.get_width()//2), # Texts of buttons in game
+                    "Start": (300, screen.get_width()//2), 
+                    ">": (575, screen.get_width()//2)}
+
     def __init__(self, surface, maplist=[]):
         
         self.maplist = maplist
@@ -127,28 +132,33 @@ class BackgroundHandler:
         self.displayingLevel = False
 
         # Initializing the numbers to choose the map
-        self.initializeTextButtons()
-    
-    def initializeTextButtons(self):
-        self.levelSelectTexts = []
-
-        longestStrLength = len(str(len(self.maplist))) # For adjusting string lengths
+        self.initializeButtons()
+       
+        # Effects of buttons clicked (changes level, starts level, uses clamping to keep in range)
+        self.buttonEffectsDict = {"<": lambda: [self.setCurrentMap(max(0, self.getCurrentMapNum()-1)), self.drawLevelMenu()],
+                                  ">": lambda: [self.setCurrentMap(min(self.getCurrentMapNum()+1, len(self.maplist)-1)), self.drawLevelMenu()],
+                                  "Start": lambda: self.setDisplayingMap(True)}
+    def initializeButtons(self):
+        self.buttons = []
         
-        # Just for getting the shift values
-        testVal = TextButton(self.surface, 0, 0, str(len(self.maplist)), 35)
-        xshift = testVal.image.get_width() * 1.2
-        yshift = testVal.image.get_height() * 1.2
-        buttonsPerRow = int(self.surface.get_width()*3/4 // xshift)
+        # Constructing the parameters
+        fontsize = 50
+        color = (0, 0, 0)
+        alpha = 185
 
-        for lvl in range(len(self.maplist)):
-            # Modifying string to fit lengths 
-            lvlStr = "0"*(longestStrLength-len(str(lvl)))+str(lvl)
-            # Making x and y coordinates based on how many levels there are
-            x = (lvl % buttonsPerRow + 1) * xshift # Compensating for spacings 
-            y = (lvl // buttonsPerRow + 1) * yshift 
-            self.levelSelectTexts.append(TextButton(self.surface, x, y, str(lvlStr), 35)) # Adding the level select to the screen
-            self.levelSelectTexts[-1].image = testVal.image.copy() # Resizing to regulate size
+        frameStartButton = TextButton(self.surface, 0,0, "Start", fontsize, color, alpha) # For getting width and height
+        frameLevelChangeButton = TextButton(self.surface, 0,0, "<", int(fontsize*0.75), color, alpha) # For getting width and height
 
+        for text in self.buttonTextsDict:
+            # Constructing additional parameters
+            x, y = self.buttonTextsDict[text]
+
+            tempButton = TextButton(self.surface, x, y, text, fontsize, color, alpha) # For getting width and hieght
+            width = tempButton.image.get_width(); x -= width//2
+            height = tempButton.image.get_height(); y -= height//2
+
+            self.buttons.append(TextButton(self.surface, x, y, text, fontsize, color, alpha))
+        
     # Simple getter and helper functions
     def renderCurrentMap(self):
         self.maplist[self.currentmapnum].redraw()
@@ -171,28 +181,29 @@ class BackgroundHandler:
     def isDisplayingLevel(self):
         return self.displayingLevel
 
-
     def drawLevelMenu(self):
         # Setting values and filling
         self.displayingLevel = False
         self.surface.fill((0, 0, 0))
 
-        # Choosing a random map to display in the background
-        randmap = random.choice(self.maplist)
-        randmap.redraw()
+        # Choosing the map to display in the background
+        toshow = self.getCurrentMap()
+        toshow.redraw()
+
         # Setting an alpha rectangle over it to tint it darker
         bgAlphaRect = pygame.Surface(self.surface.get_size())
         bgAlphaRect.fill((30, 30, 30))
         bgAlphaRect.set_alpha(175)
         self.surface.blit(bgAlphaRect, (0, 0))
 
-        self.redrawNumbers() # Redrawing the numbers
+        self.redrawButtons()
 
         surface_fade_in(self.surface, 60) # Fade effect
 
-    def redrawNumbers(self):
-        for levelSelectText in self.levelSelectTexts:
-            levelSelectText.redraw()
+    def redrawButtons(self):
+        # Redraws start, next, and back buttons
+        for button in self.buttons:
+            button.redraw()
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -208,17 +219,14 @@ class BackgroundHandler:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 # Checking to see if a level has been selected
-                val = self.checkLevelSelectClicked(mx, my) 
-                if val != None: # If not None, then initialize the level
-                    self.setCurrentMap(val)
-                    self.displayingLevel = True
-
-    def checkLevelSelectClicked(self, mx, my):
-        # Checking each level select text to see if it was clicked
-        for levelSelectText in self.levelSelectTexts:
-            if levelSelectText.isClicked(mx, my):
-                num = eval(re.sub(r"0([0-9])", r"\1", levelSelectText.getText())) # Getting the number by stripping off the zeroes by using regex then eval
-                return num # Once we have that one thing is clicked, we can disregard the rest
+                val = self.checkButtonClicked(mx, my) 
+                if val != None: self.buttonEffectsDict[val]()
+        
+    def checkButtonClicked(self, mx, my):
+        # Checking to see if any button has been clicked
+        for button in self.buttons:
+            if button.isClicked(mx, my):
+                return button.getText()
 
         return None
 
@@ -574,7 +582,7 @@ class Player(pygame.sprite.Sprite):
             self.backgroundHandler.maplist.append(toadd)
         
         # Updating the numbers for the level selects
-        self.backgroundHandler.initializeTextButtons()
+        self.backgroundHandler.initializeButtons()
 
     def update(self):
         # Updating dimensions
