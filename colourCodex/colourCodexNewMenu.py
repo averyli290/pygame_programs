@@ -112,57 +112,71 @@ class BackgroundHandler:
     def __init__(self, surface, maplist=[]):
         
         # Variables
-        self.maplist = maplist
+        self.levelpacks = {} # "Pack Name: [maplist]" 
+        self.currentPack = None # The map pack being used
+        self.maplist = maplist # Will be dependent on the current Pack being used
         self.surface = surface
         self.currentmapnum = 0
         self.displayingLevel = False
         self.currentbuttons = []
+        
+        # Initializing the buttons
+        self.guiLevelInitializeFunctions = {0.0: lambda: self.initializeMainMenuButtons(),
+                                            1.0: lambda: self.initializeLevelPackButtons(),
+                                            2.0: lambda: self.initializeLevelButtons(), 
+                                            1.1: lambda: self.initialzeInfoButtons()}
+        # redrawing the buttons for the menus
+        self.guiLevelDrawFunctions = {0.0: lambda: self.drawMainMenu(),
+                                      1.0: lambda: self.drawLevelPackMenu(),
+                                      2.0: lambda: self.drawLevelMenu(), 
+                                      1.1: lambda: self.drawInfoMenu()}
+        
+        # Just for readability
+        self.guiLevelNamesConversion = {"Main Menu": 0.0,
+                                  "Level Packs": 1.0,
+                                  "Levels": 2.0,
+                                  "Info": 1.1}
+
+        self.guiLevel = 0.0 # 0.0 is main menu,
+                            # 1.0 is level pack menu,
+                            # 1.1 is info,
+                            # 2.0 is level menu
 
         # Initializing the numbers to choose the map
         self.initializeLevelButtons()
        
         # Effects of buttons clicked (changes level, starts level, uses clamping to keep in range)
-        self.buttonEffectsDict = {"<": lambda: [self.setCurrentMap(max(0, self.getCurrentMapNum()-1)), self.drawLevelMenu()],
-                                  ">": lambda: [self.setCurrentMap(min(self.getCurrentMapNum()+1, len(self.maplist)-1)), self.drawLevelMenu()],
+        self.buttonEffectsDict = { # Level Screen
+                                  "<": lambda: [self.setPrevMap(), self.drawLevelMenu()],
+                                  ">": lambda: [self.setNextMap(), self.drawLevelMenu()],
                                   "|<": lambda: [self.setCurrentMap(0), self.drawLevelMenu()],
                                   ">|": lambda: [self.setCurrentMap(len(self.maplist)-1), self.drawLevelMenu()],
-                                  "Start": lambda: self.setDisplayingMap(True)}
-    def initializeLevelButtons(self):
-        self.currentbuttons = []
+                                  "Start": lambda: self.setDisplayingMap(True),
+                                   # Main Menu
+                                   "Level Packs": lambda: [self.setGUILevel(self.guiLevelNamesConversion["Level Packs"]),
+                                                           self.drawCurrentMenu()],
+                                   # Level Packs Menu
+                                   "Levels": lambda: [self.setGUILevel(self.guiLevelNamesConversion["Levels"]),
+                                                      self.drawCurrentMenu()]
+                                  }
 
-        priorityQueue = ["|<", "<", "Start", ">", ">|"] # Telling which buttons to make first
-        
-        # Constructing the parameters
-        fontsize = 35 
-        color = (0, 0, 0)
-        alpha = 175 
 
-        frameStartButton = TextButton(self.surface, 0,0, "Start", fontsize, color, alpha) # For getting width and height
-        frameLevelChangeButton0 = TextButton(self.surface, 0,0, "<", fontsize, color, alpha) # For getting width and height
-        frameLevelChangeButton1 = TextButton(self.surface, 0,0, "|<", fontsize, color, alpha) # For getting width and height
-
-        xmargin = (self.surface.get_width()-2*(frameLevelChangeButton0.image.get_width()+frameLevelChangeButton1.image.get_width())-frameStartButton.image.get_width())/(len(priorityQueue)+1)
-
-        x = 0 
-        y = (self.surface.get_height() - frameStartButton.image.get_height())/2 
-
-        for text in priorityQueue:
-            # Making margin and distance adjustments
-            if len(self.currentbuttons) > 0: x += self.currentbuttons[-1].image.get_width()
-            x += xmargin
-
-            self.currentbuttons.append(TextButton(self.surface, x, y, text, fontsize, color, alpha))
-        
     # Simple getter and helper functions
     def renderCurrentMap(self):
         self.maplist[self.currentmapnum].redraw()
 
     def setCurrentMap(self, index):
-        self.currentmapnum = index
+        self.currentmapnum = max(0, min(len(self.maplist)-1, index)) # Clamping
 
     def getCurrentMap(self):
         return self.maplist[self.currentmapnum]
     
+    def setNextMap(self):
+        self.currentmapnum = max(0, min(len(self.maplist)-1, self.getCurrentMapNum()+1)) # Clamping
+
+    def setPrevMap(self):
+        self.currentmapnum = max(0, min(len(self.maplist)-1, self.getCurrentMapNum()-1)) # Clamping
+
     def getCurrentMapNum(self):
         return self.currentmapnum
 
@@ -175,7 +189,91 @@ class BackgroundHandler:
     def isDisplayingLevel(self):
         return self.displayingLevel
 
+    def setGUILevel(self, level):
+        self.guiLevel = level
+
+    def initializeLevelButtons(self):
+        # Creates buttons for the level screen
+
+        self.currentbuttons = []
+
+        buttonQueue = ["|<", "<", "Start", ">", ">|"] # Buttons to make
+        
+        # Constructing the parameters
+        fontsize = 35 
+        color = (0, 0, 0)
+        alpha = 175 
+
+        frameButtons = [TextButton(self.surface, 0, 0, text, fontsize, color, alpha) for text in buttonQueue] # For getting width and height
+
+        xmargin = (self.surface.get_width()-sum([frameButton.image.get_width() for frameButton in frameButtons]))/(len(buttonQueue)+1)
+        
+        # Starting coordinates
+        x = 0 
+        y = (self.surface.get_height() - frameButtons[0].image.get_height())/2
+
+        for text in buttonQueue:
+            # Making margin and distance adjustments
+            if len(self.currentbuttons) > 0: x += self.currentbuttons[-1].image.get_width()
+            x += xmargin
+
+            self.currentbuttons.append(TextButton(self.surface, x, y, text, fontsize, color, alpha))
+
+    def initializeMainMenuButtons(self):
+        # Creates buttons for the main menu
+
+        self.currentbuttons = []
+
+        buttonQueue = ["Level Packs"] # Buttons to make 
+        
+        # Constructing the parameters
+        fontsize = 35 
+        color = (0, 0, 0)
+        alpha = 175 
+
+        frameButtons = [TextButton(self.surface, 0, 0, text, fontsize, color, alpha) for text in buttonQueue] # For getting width and height
+
+        x = self.surface.get_width()//2
+        y = (self.surface.get_height() - frameButtons[0].image.get_height())/2
+
+        for text in buttonQueue:
+            frameButton = TextButton(self.surface, 0, 0, text, fontsize, color, alpha) # For getting the width and height
+            # Making margin and distance adjustments
+            if len(self.currentbuttons) > 0: y += self.currentbuttons[-1].image.get_height()
+            x = (self.surface.get_width()-frameButton.image.get_width())//2
+            self.currentbuttons.append(TextButton(self.surface, x, y, text, fontsize, color, alpha))
+
+    def initializeLevelPackButtons(self):
+        # Creates buttons for the main menu
+
+        self.currentbuttons = []
+
+        buttonQueue = ["Levels"] # Buttons to make 
+        
+        # Constructing the parameters
+        fontsize = 35 
+        color = (0, 0, 0)
+        alpha = 175 
+
+        frameButtons = [TextButton(self.surface, 0, 0, text, fontsize, color, alpha) for text in buttonQueue] # For getting width and height
+
+        x = self.surface.get_width()//2
+        y = (self.surface.get_height() - frameButtons[0].image.get_height())/2
+
+        for text in buttonQueue:
+            frameButton = TextButton(self.surface, 0, 0, text, fontsize, color, alpha) # For getting the width and height
+            # Making margin and distance adjustments
+            if len(self.currentbuttons) > 0: y += self.currentbuttons[-1].image.get_height()
+            x = (self.surface.get_width()-frameButton.image.get_width())//2
+            self.currentbuttons.append(TextButton(self.surface, x, y, text, fontsize, color, alpha))
+
+    def initialzeInfoButtons(self):
+        pass
+
     def drawLevelMenu(self):
+        # Initializing the buttons
+        self.initializeLevelButtons()
+
         # Setting values and clearing 
         self.displayingLevel = False
         self.surface.fill((0, 0, 0))
@@ -192,18 +290,49 @@ class BackgroundHandler:
 
         # Drawing the level number
         text = "Level " + str(self.getCurrentMapNum())
-        fontsize = 20 
+        fontsize = 30 
         color = (255,255,255)
         alpha = 150 
         levelNumberFrame = TextButton(self.surface, 0, 0, text, fontsize, color, 0)
         x, y = (self.surface.get_width()-levelNumberFrame.image.get_width())/2, levelNumberFrame.image.get_height()
         levelNumber = TextButton(self.surface, x, y, text, fontsize, (0, 0, 0), alpha)
-
-        self.redrawButton()
+        
+        # redrawing buttons 
+        self.redrawButtons()
 
         surface_fade_in(self.surface, 30) # Fade effect
 
-    def redrawButton(self):
+    def drawLevelPackMenu(self):
+        # Initializing the buttons
+        self.initializeLevelPackButtons()
+
+        # Setting values and clearing 
+        self.displayingLevel = False
+        self.surface.fill((0, 0, 0))
+
+        # redrawing buttons
+        self.redrawButtons()
+
+    def drawMainMenu(self):
+        # Initializing the buttons
+        self.initializeMainMenuButtons()
+
+        # Setting values and clearing 
+        self.displayingLevel = False
+        self.surface.fill((0, 0, 0))
+
+        # redrawing buttons
+        self.redrawButtons()
+    
+    def initializeCurrentMenu(self):
+        # Initializes the menu
+        self.guiLevelInitializeFunctions[self.guiLevel]()
+
+    def drawCurrentMenu(self):
+        # Draws the menu
+        self.guiLevelDrawFunctions[self.guiLevel]()
+
+    def redrawButtons(self):
         # Redraws start, next, and back buttons
         for button in self.currentbuttons:
             button.redraw()
@@ -215,7 +344,9 @@ class BackgroundHandler:
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 self.handle_mouse(event) # Handing to another funciton handler
-    
+            elif event.type == pygame.KEYDOWN:
+                self.handle_key(event)# Handing to another funciton handler
+
     def handle_mouse(self, event):
         # Mouse inputs
         mx, my = pygame.mouse.get_pos()
@@ -224,6 +355,15 @@ class BackgroundHandler:
                 # Checking to see if a level has been selected
                 val = self.checkButtonClicked(mx, my) 
                 if val != None: self.buttonEffectsDict[val]()
+
+    def handle_key(self, event):
+        # Takes a key input and applies something with it
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                maxIntGuiLevel = max([int(guiLevel) for guiLevel in self.guiLevelInitializeFunctions]) # Stripping off the decimals to get the max of the guilevel
+                self.guiLevel = float(max(0, min(int(self.guiLevel)-1, maxIntGuiLevel))) # Sets the guiLevel to a lower base(int)level
+                # Drawing the menu
+                self.drawCurrentMenu()
         
     def checkButtonClicked(self, mx, my):
         # Checking to see if any button has been clicked
@@ -266,8 +406,10 @@ class Player(pygame.sprite.Sprite):
         self.hasKey = False # For getting through brown
     
         # Image values
+        self.color = (255, 255, 255)
+        self.playerAlpha = 255 
         self.image = pygame.Surface((0, 0))
-        self.image.fill((255, 255, 255))
+        self.image.fill(self.color)
         self.rect = self.image.get_rect()
 
         self.cx = 0
@@ -304,6 +446,7 @@ class Player(pygame.sprite.Sprite):
                                 self.colordict["black"]: lambda: [self.staticanimation(), self.initializeMap(self.backgroundHandler.getCurrentMapNum())] # Black - Wall (kills you!)
                                 }
 
+    
     def finishLevel(self):
         # a fading rectangle into screen with text inside of it
 
@@ -333,7 +476,8 @@ class Player(pygame.sprite.Sprite):
 
         # Fading out
         surface_fade_out(self.screen, 60)
-
+        
+        # Automatically progresses to next map and then draws menu
         self.backgroundHandler.drawLevelMenu()
 
     def initializeMap(self, index):
@@ -468,6 +612,8 @@ class Player(pygame.sprite.Sprite):
     
     def gainKey(self):
         self.hasKey = True # Player gains passage through brown doors
+        self.image.fill((0, 255, 0)) # Green tint effect
+        self.image.set_alpha(175)
 
     def checkKey(self):
         # If no key and brown collision, then player dies
@@ -526,6 +672,7 @@ class Player(pygame.sprite.Sprite):
 
             # Updating image + screen
             self.image.fill((255,255,255))
+            self.image.set_alpha(self.playerAlpha)
             self.rect = self.image.get_rect()
             self.backgroundHandler.surface.blit(self.image, (self.px-self.pwidth//2, self.py-self.pheight//2))
 
@@ -600,7 +747,8 @@ class Player(pygame.sprite.Sprite):
 
         # Updating the dimensions+colors
         self.image = pygame.Surface((self.pwidth, self.pheight))
-        self.image.fill((255,255,255))
+        self.image.fill(self.color)
+        self.image.set_alpha(self.playerAlpha)
         self.rect = self.image.get_rect()
         
         # Applying multipliers for the movement speed
@@ -624,8 +772,9 @@ playerSprite.add(p1)
 screen.fill((0, 0, 0)) # Clearing screen completely before starting
 
 p1.readfile()
-p1.backgroundHandler.drawLevelMenu()
 
+# Starting at the main menu (initializing the buttons, then drawing menu)
+p1.backgroundHandler.guiLevelDrawFunctions[p1.backgroundHandler.guiLevel]()
 
 while True:
     if p1.backgroundHandler.isDisplayingLevel():
