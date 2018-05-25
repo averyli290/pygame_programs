@@ -10,9 +10,6 @@ pygame.init()
 screen_width, screen_height = size = 625,625
 screen = pygame.display.set_mode(size)
 
-# MAKE ESCAPE/QUIT BUTTON FOR THE LOWEST GUI LEVEL
-
-
 # GENERAL FUNCTIONS
 
 def surface_fade_out(screen, alphacap=60, iterspeed=2, color=(0,0,0)): # Default color to fade out to is black, 60 is good alpha
@@ -109,38 +106,44 @@ class MapLevel(CellBoard):
 
 class BackgroundHandler:
     # All pretty much self explanatory
-    def __init__(self, surface, maplist=[]):
+
+    colordict = {"startcolor": (128, 128, 128), # THIS IS THE START COLOR
+                      "red": (255, 0, 0), # For referencing the name of the color and not have to manually punch in the rgb value
+                      "pink": (255, 175, 255),
+                      "blue": (0, 0, 255),
+                      "lightblue": (173, 216, 230),
+                      "purple": (185, 0, 255),
+                      "lightpurple": (185, 125, 255),
+                      "orange": (255, 128, 0),
+                      "yellow": (255, 255, 0),
+                      "green": (0, 255, 0),
+                      "brown": (78, 46, 40),
+                      "black": (0, 0, 0)}
+
+    def __init__(self, surface):
         
         # Variables
         self.levelpacks = {} # "Pack Name: [maplist]" 
         self.currentPack = None # The map pack being used
-        self.maplist = maplist # Will be dependent on the current Pack being used
+        self.maplist = None # Will be dependent on the current Pack being used
         self.surface = surface
         self.currentmapnum = 0
         self.displayingLevel = False
         self.currentbuttons = []
         
-        # Initializing the buttons
-        self.guiLevelInitializeFunctions = {0.0: lambda: self.initializeMainMenuButtons(),
-                                            1.0: lambda: self.initializeLevelPackButtons(),
-                                            2.0: lambda: self.initializeLevelButtons(), 
-                                            1.1: lambda: self.initialzeInfoButtons()}
-        # redrawing the buttons for the menus
-        self.guiLevelDrawFunctions = {0.0: lambda: self.drawMainMenu(),
-                                      1.0: lambda: self.drawLevelPackMenu(),
-                                      2.0: lambda: self.drawLevelMenu(), 
-                                      1.1: lambda: self.drawInfoMenu()}
-        
-        # Just for readability
-        self.guiLevelNamesConversion = {"Main Menu": 0.0,
-                                  "Level Packs": 1.0,
-                                  "Levels": 2.0,
-                                  "Info": 1.1}
+        # For converting the names into numbers that the program can use in dictionaries 
+        self.guiLevelNamesConversion = {"Main Menu": "0.0",
+                                        "Level Packs": "0.1",
+                                        "Levels": "0.2", # For enabling using other numbers for the id of packs
+                                        "Info": "0.1.1"}
 
-        self.guiLevel = 0.0 # 0.0 is main menu,
-                            # 1.0 is level pack menu,
-                            # 1.1 is info,
-                            # 2.0 is level menu
+        # redrawing the buttons for the menus
+        self.guiLevelDrawFunctions = {self.guiLevelNamesConversion["Main Menu"]: lambda: self.drawMainMenu(),
+                                      self.guiLevelNamesConversion["Level Packs"]: lambda: self.drawLevelPackMenu(),
+                                      self.guiLevelNamesConversion["Levels"]: lambda: self.drawLevelMenu(), 
+                                      self.guiLevelNamesConversion["Info"]: lambda: self.drawInfoMenu()}
+        
+        self.guiLevel = "0.0" 
 
         # Initializing the numbers to choose the map
         self.initializeLevelButtons()
@@ -192,6 +195,17 @@ class BackgroundHandler:
     def setGUILevel(self, level):
         self.guiLevel = level
 
+    def setLevelPack(self, packname):
+        # Sets the maplist to a list of maps provided by the name and the current pack
+        self.currentPack = packname
+        self.maplist = self.levelpacks[packname]
+        # Also resetting the map number in order to not have out of range errors when changing level packs as some level packs have a longer length
+        self.currentmapnum = 0
+
+    def getCurrentLevelPack(self):
+        return self.currentPack
+    
+    # Initializing button functions for each gui level
     def initializeLevelButtons(self):
         # Creates buttons for the level screen
 
@@ -202,11 +216,12 @@ class BackgroundHandler:
         # Constructing the parameters
         fontsize = 35 
         color = (0, 0, 0)
+        imagecolor = (200, 200, 200)
         alpha = 175 
 
-        frameButtons = [TextButton(self.surface, 0, 0, text, fontsize, color, alpha) for text in buttonQueue] # For getting width and height
+        frameButtons = [TextButton(self.surface, 0, 0, text, fontsize, color, imagecolor, alpha) for text in buttonQueue] # For getting width and height
 
-        xmargin = (self.surface.get_width()-sum([frameButton.image.get_width() for frameButton in frameButtons]))/(len(buttonQueue)+1)
+        xmargin = (self.surface.get_width()-sum([frameButton.image.get_width() for frameButton in frameButtons]))/(len(buttonQueue)+1) # Getting the margin
         
         # Starting coordinates
         x = 0 
@@ -217,7 +232,7 @@ class BackgroundHandler:
             if len(self.currentbuttons) > 0: x += self.currentbuttons[-1].image.get_width()
             x += xmargin
 
-            self.currentbuttons.append(TextButton(self.surface, x, y, text, fontsize, color, alpha))
+            self.currentbuttons.append(TextButton(self.surface, x, y, text, fontsize, color, imagecolor, alpha))
 
     def initializeMainMenuButtons(self):
         # Creates buttons for the main menu
@@ -229,47 +244,53 @@ class BackgroundHandler:
         # Constructing the parameters
         fontsize = 35 
         color = (0, 0, 0)
+        imagecolor = (200, 200, 200)
         alpha = 175 
 
-        frameButtons = [TextButton(self.surface, 0, 0, text, fontsize, color, alpha) for text in buttonQueue] # For getting width and height
+        frameButtons = [TextButton(self.surface, 0, 0, text, fontsize, color, imagecolor, alpha) for text in buttonQueue] # For getting width and height
 
         x = self.surface.get_width()//2
         y = (self.surface.get_height() - frameButtons[0].image.get_height())/2
 
         for text in buttonQueue:
-            frameButton = TextButton(self.surface, 0, 0, text, fontsize, color, alpha) # For getting the width and height
+            frameButton = TextButton(self.surface, 0, 0, text, fontsize, color, imagecolor, alpha) # For getting the width and height
             # Making margin and distance adjustments
             if len(self.currentbuttons) > 0: y += self.currentbuttons[-1].image.get_height()
             x = (self.surface.get_width()-frameButton.image.get_width())//2
-            self.currentbuttons.append(TextButton(self.surface, x, y, text, fontsize, color, alpha))
+            self.currentbuttons.append(TextButton(self.surface, x, y, text, fontsize, color, imagecolor, alpha))
 
     def initializeLevelPackButtons(self):
         # Creates buttons for the main menu
 
         self.currentbuttons = []
 
-        buttonQueue = ["Levels"] # Buttons to make 
+        buttonQueue = [key for key in self.levelpacks] # Buttons to make 
         
         # Constructing the parameters
         fontsize = 35 
         color = (0, 0, 0)
+        imagecolor = (200, 200, 200)
         alpha = 175 
 
-        frameButtons = [TextButton(self.surface, 0, 0, text, fontsize, color, alpha) for text in buttonQueue] # For getting width and height
+        frameButtons = [TextButton(self.surface, 0, 0, text, fontsize, color, imagecolor, alpha) for text in buttonQueue] # For getting width and height
 
         x = self.surface.get_width()//2
-        y = (self.surface.get_height() - frameButtons[0].image.get_height())/2
+        y = 0
+
+        ymargin = (self.surface.get_height()-sum([frameButton.image.get_height() for frameButton in frameButtons]))/(len(buttonQueue)+1) # Getting the margin (do the math!)
 
         for text in buttonQueue:
-            frameButton = TextButton(self.surface, 0, 0, text, fontsize, color, alpha) # For getting the width and height
+            frameButton = TextButton(self.surface, 0, 0, text, fontsize, color, imagecolor, alpha) # For getting the width and height
             # Making margin and distance adjustments
             if len(self.currentbuttons) > 0: y += self.currentbuttons[-1].image.get_height()
             x = (self.surface.get_width()-frameButton.image.get_width())//2
-            self.currentbuttons.append(TextButton(self.surface, x, y, text, fontsize, color, alpha))
+            y += ymargin
+            self.currentbuttons.append(TextButton(self.surface, x, y, text, fontsize, color, imagecolor, alpha))
 
     def initialzeInfoButtons(self):
         pass
-
+    
+    # The Drawing fucntions for each gui level
     def drawLevelMenu(self):
         # Initializing the buttons
         self.initializeLevelButtons()
@@ -288,14 +309,15 @@ class BackgroundHandler:
         bgAlphaRect.set_alpha(175)
         self.surface.blit(bgAlphaRect, (0, 0))
 
-        # Drawing the level number
-        text = "Level " + str(self.getCurrentMapNum())
+        # Drawing the level number as a fraction
+        text = "Level " + str(self.getCurrentMapNum()) + "/" + str(len(self.levelpacks[self.getCurrentLevelPack()])-1)
         fontsize = 30 
         color = (255,255,255)
+        imagecolor = (200, 200, 200)
         alpha = 150 
-        levelNumberFrame = TextButton(self.surface, 0, 0, text, fontsize, color, 0)
+        levelNumberFrame = TextButton(self.surface, 0, 0, text, fontsize, color, imagecolor, 0)
         x, y = (self.surface.get_width()-levelNumberFrame.image.get_width())/2, levelNumberFrame.image.get_height()
-        levelNumber = TextButton(self.surface, x, y, text, fontsize, (0, 0, 0), alpha)
+        levelNumber = TextButton(self.surface, x, y, text, fontsize, (0, 0, 0), imagecolor, alpha)
         
         # redrawing buttons 
         self.redrawButtons()
@@ -313,6 +335,8 @@ class BackgroundHandler:
         # redrawing buttons
         self.redrawButtons()
 
+        surface_fade_in(self.surface, 30) # Fade effect
+
     def drawMainMenu(self):
         # Initializing the buttons
         self.initializeMainMenuButtons()
@@ -323,15 +347,20 @@ class BackgroundHandler:
 
         # redrawing buttons
         self.redrawButtons()
+   
+        surface_fade_in(self.surface, 30) # Fade effect
     
+    # A general function for initializing the current menu
     def initializeCurrentMenu(self):
         # Initializes the menu
         self.guiLevelInitializeFunctions[self.guiLevel]()
-
+    
+    # A general function for drawing the current menu
     def drawCurrentMenu(self):
         # Draws the menu
         self.guiLevelDrawFunctions[self.guiLevel]()
 
+    # Redraws buttons
     def redrawButtons(self):
         # Redraws start, next, and back buttons
         for button in self.currentbuttons:
@@ -360,11 +389,12 @@ class BackgroundHandler:
         # Takes a key input and applies something with it
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                maxIntGuiLevel = max([int(guiLevel) for guiLevel in self.guiLevelInitializeFunctions]) # Stripping off the decimals to get the max of the guilevel
-                self.guiLevel = float(max(0, min(int(self.guiLevel)-1, maxIntGuiLevel))) # Sets the guiLevel to a lower base(int)level
-                # Drawing the menu
-                self.drawCurrentMenu()
-        
+                maxGuiLevel = max([eval(guiLevel[:3]) for guiLevel in self.guiLevelNamesConversion.values()]) # taking the first digit and the one after the decimal point (v.x)
+                self.guiLevel = eval(self.guiLevel[:3]) # Modifying the current level the same way, just takes the first number before and after the decimal point
+                self.guiLevel = str(float(max(0, min(float(self.guiLevel)-0.1, maxGuiLevel)))) # Sets the guiLevel to a lower base(1 dec float)level, clamping and converting it to the format needed (a string)
+                surface_fade_out(self.surface, 30) # Fade effect
+                self.drawCurrentMenu() # Redrawing the menu to update
+
     def checkButtonClicked(self, mx, my):
         # Checking to see if any button has been clicked
         for button in self.currentbuttons:
@@ -372,6 +402,74 @@ class BackgroundHandler:
                 return button.getText()
 
         return None
+    
+    def readlevelpack(self, filename="levels"):
+        # This function reads in level packs
+        # creating another level
+        levelpack = []
+
+        lines = []
+
+        with open(filename+".txt", "r") as f:
+            for line in f:
+                lines.append(line)
+
+        colors = []
+        coords = []
+        
+        # Splitting and adding the lines to the appropriate list
+        for line in lines:
+            if "SPACER" in line:
+                colors.append([])
+                coords.append([])
+            else:
+                s = line.split(";")
+
+                # Changes string tuple into tuple
+                color = eval(s[0])
+                coord = eval(s[1])
+
+                # Checking if to add new line
+                if len(colors[-1]) <= coord[0]:
+                    colors[-1].append([])
+                    coords[-1].append([])
+
+                colors[-1][-1].append(color)
+                coords[-1][-1].append(coord)
+
+        for m in range(len(colors)):
+            # Initializing the map
+            toadd = MapLevel(self.surface, (0, 0), True, False, 25, 25, len(colors[m]), len(colors[m][0]))
+            # Adding the colors to the map
+            tempcolors = colors[m]
+            tempcoords = coords[m]
+
+            for row in range(len(tempcolors)):
+                for col in range((len(tempcolors[row]))):
+                    if tempcolors[row][col] not in self.colordict.values(): # If the color is not recognized in color dictionary, set it to defualt color
+                        tempcolors[row][col] = (170, 170, 170)
+                    elif tempcolors[row][col] == (self.colordict["startcolor"]): # Checking to see if it is the starting position
+                        toadd.startPos = (row, col) # Setting the start position#
+                    toadd.celllist[row][col].fill(tempcolors[row][col]) # Directly fill it for efficiency
+
+            levelpack.append(toadd)
+        
+        # Each level pack has its own id number for reference, and the list of maps in it is stored in a dictionary of self.levelpacks
+        # Adding the level pack to the dictionaries
+        self.levelpacks[filename] = levelpack
+
+        # Getting a distinct id number
+        i = 1 
+        idNumber = self.guiLevelNamesConversion["Levels"]+".0"+str(i) # Giving the pack its own distinct id number (actually a string)
+        while self.guiLevelNamesConversion["Levels"]+".0"+str(i) in self.guiLevelNamesConversion.values(): #Keeps on adding until the id is not in the dictionary values
+            i += 1 # For adding onto the end of the string
+            idNumber = self.guiLevelNamesConversion["Levels"]+".0"+str(i) # Giving the pack its own distinct id number (actually a string)
+
+        self.guiLevelNamesConversion[filename] = idNumber
+        self.guiLevelDrawFunctions[idNumber] = lambda: self.drawLevelMenu() # Making another simple dictionary assignment
+        # THIS USES A FILENAME FOR A KEY since when a button effect if run, the text of the button is looked at and then used to lok inside of the dictionary
+        self.buttonEffectsDict[filename] = lambda: [self.setLevelPack(filename), self.setGUILevel(self.guiLevelNamesConversion[filename]),
+                                                    self.drawCurrentMenu()] # This has to set a level pack to the maplist first, then set the gui level and draw the menu
 
 class Player(pygame.sprite.Sprite):
 
@@ -379,7 +477,7 @@ class Player(pygame.sprite.Sprite):
     usualblockwidth = 25 # For scaling the speed later
     scalefactor = 1.4 # The scale of player width to block width
 
-    def __init__(self, screen, maplist=[], startposlist=[], rotation=0, bgcolor=(0,0,0)):
+    def __init__(self, screen, startposlist=[], rotation=0, bgcolor=(0,0,0)):
         pygame.sprite.Sprite.__init__(self)
 
         self.screen = screen
@@ -404,6 +502,11 @@ class Player(pygame.sprite.Sprite):
         self.parameters = [1, 1] # Format is [speed, size]
         self.effectFunctionQueue = set() # For running functions in a queue, a set so duplicates can't be run multiple times
         self.hasKey = False # For getting through brown
+
+        # Level Stats (resets per level)
+        self.attemptCount = 0
+        self.starttime = 0
+        self.buttonsClicked = 0
     
         # Image values
         self.color = (255, 255, 255)
@@ -415,7 +518,7 @@ class Player(pygame.sprite.Sprite):
         self.cx = 0
         self.cy = 0
 
-        self.backgroundHandler = BackgroundHandler(self.screen, maplist)
+        self.backgroundHandler = BackgroundHandler(self.screen)
 
         # Other values/things
         self.bgcolor = bgcolor
@@ -423,6 +526,8 @@ class Player(pygame.sprite.Sprite):
         self.colordict = {"startcolor": (128, 128, 128), # THIS IS THE START COLOR
                           "red": (255, 0, 0), # For referencing the name of the color and not have to manually punch in the rgb value
                           "pink": (255, 175, 255),
+                          "blue": (0, 0, 255),
+                          "lightblue": (173, 216, 230),
                           "purple": (185, 0, 255),
                           "lightpurple": (185, 125, 255),
                           "orange": (255, 128, 0),
@@ -431,56 +536,138 @@ class Player(pygame.sprite.Sprite):
                           "brown": (78, 46, 40),
                           "black": (0, 0, 0)}
 
+        self.backgroundHandler.colordict = self.colordict # Setting the corresponding color dictionary
+
         self.maplevel = 0
 
         # Dictionary for applying certain effects
         # Without lambda, function always runs at beginning
         self.effectFunctions = {self.colordict["red"]: lambda: self.applySpeedUp(), # Red - Speed up
                                 self.colordict["pink"]: lambda: self.applyRegulateSpeed(), # Pink - Regulate speed
+                                self.colordict["blue"]: lambda: self.teleportPlayer(), # Teleports player to light lue
+                                self.colordict["lightblue"]: lambda: None, # Does nothing (player teleports to this)
                                 self.colordict["purple"]: lambda: self.applyShrinkSize(), # Purple - Shrink size
                                 self.colordict["lightpurple"]: lambda: self.applySuperShrinkSize(), # Light Purple - Shrink size
                                 self.colordict["orange"]: lambda: self.applyRegulateSize(), # Orange - Regulate size
                                 self.colordict["yellow"]: lambda: [self.staticanimation(), self.finishLevel()], # Yellow - Finish
                                 self.colordict["green"]: lambda: self.gainKey(), # Green - Key to go through brown
                                 self.colordict["brown"]: lambda: self.checkKey(), # Brown - Door that requires green
-                                self.colordict["black"]: lambda: [self.staticanimation(), self.initializeMap(self.backgroundHandler.getCurrentMapNum())] # Black - Wall (kills you!)
+                                self.colordict["black"]: lambda: [self.staticanimation(), self.initializeMap(self.backgroundHandler.getCurrentMapNum()), self.addAttempt()] # Black - Wall (kills you!)
                                 }
 
     
     def finishLevel(self):
+        # Setting the finish time
+        finishtime = time.time()
         # a fading rectangle into screen with text inside of it
 
         for f in range(0, 25): # The alpha only goes up to 25
-            # Displaying text with 3 times the alpha of the rectangle so it can be seen, size 27
-            alphaSurf, textSurf, textRect = display_text("Level Finished!", 27, pygame.font.get_default_font(), (255, 255, 255))
+            # Making the level finished text
+            alphaSurf, textSurf, textRect = display_text_alpha("Level Finished!", 45, pygame.font.get_default_font(), (255, 255, 255), f, (30, 30, 30), 0.75)
+
+            self.screen.blit(alphaSurf, (self.screen.get_width()//2-alphaSurf.get_width()//2, alphaSurf.get_height()*1.75))# Adding it to the screen and centering using math
+
+            # Drawing the stats with the alpha
+            self.drawCurrentStats(f, finishtime)
             
-            # Making paddings for the text in the translucent rectangle
-            alpharectwidth = textSurf.get_width()*1.5
-            alpharectheight = textSurf.get_height()*2 
-
-            alpharect = pygame.Surface((alpharectwidth, alpharectheight)) # Semi transparent rectangle
-            alpharect.fill((30,30,30,f)) # Dark grey color (30,30,30)
-            cx, cy = ((alpharect.get_width()-textSurf.get_width())/2, (alpharect.get_height()-textSurf.get_height())/2) # Calculating where the top left of the rectangle should be
-            alpharect.blit(textSurf, (cx, cy)) # Adding the text to the surface to be added to the screen
-            alpharect.set_alpha(f) # Setting the alpha (transparency)
-
-            self.screen.blit(alpharect, (self.screen.get_width()//2-alpharect.get_width()//2, self.screen.get_height()//2-alpharect.get_height()//2))# Adding it to the screen and cetnering using math
+            # Drawing a button for continuing
+            continueButton = TextButton(self.screen, self.screen.get_width(), self.screen.get_height(), "Continue", 30, (255, 255, 255), (30, 30, 30), f/2, 255) # Setting it off of the screen
+            continueButton.setCenter(self.screen.get_width()//2, self.screen.get_height()-continueButton.image.get_height()*1.5) # Then moving it
+            continueButton.redraw()
 
             pygame.display.flip() # Displaying the screen 
 
             # Sleeping for emphasizing fade effect
             time.sleep(0.02)
 
-        # Waiting a few seconds
-        time.sleep(1)
+        # Waiting until a button is pressed 
+        buttonNotPressed = True 
+        while buttonNotPressed:
+            for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1: # Checking for click and if button was clicked. breaks out of this loop
+                        mx, my = pygame.mouse.get_pos()
+                        if continueButton.isClicked(mx, my):
+                            buttonNotPressed = False 
+
+                elif event.type == pygame.KEYDOWN: # Pressing escape will also break this
+                    if event.key == pygame.K_ESCAPE:
+                        buttonNotPressed = False 
+
+                elif event.type == pygame.QUIT: # Checking for quitting
+                    pygame.quit()
+                    sys.exit()
 
         # Fading out
         surface_fade_out(self.screen, 60)
         
         # Automatically progresses to next map and then draws menu
+        self.backgroundHandler.setNextMap()
         self.backgroundHandler.drawLevelMenu()
 
+    def drawCurrentStats(self, alpha, finishtime=time.time()):
+        # Getting time since start
+        completiontime = round(finishtime-self.starttime, 2) # To the nearest hundredth
+        # Statistics List
+        stats_list = ["Attemps: "+str(self.attemptCount), "Buttons Pressed: "+str(self.buttonsClicked), "Time: "+str(completiontime)]
+
+        # Constructing the parameters for the text
+        fontsize = 27 
+        font = pygame.font.get_default_font()
+        color = (255, 255, 255)
+        imagecolor = (30,30,30)
+        alpha = alpha*2 # Adjusting to make the same color as the other text
+        margin = 0.5 
+            
+        frameTexts = [display_text_alpha(text, fontsize, font, color, 0, (0,0,0), margin) for text in stats_list] # For making margins between text
+        
+        # For making the backdrop later (using extremes to make sure that the first values get accepted)
+        minX = 100000000
+        minY = 100000000
+        maxX = -100000000
+        maxY = -100000000
+
+
+        # Making start x and start y
+        x = self.screen.get_width()//2
+        y = self.screen.get_height()/2 - frameTexts[0][0].get_height()*2
+
+        blitQueue = [] # To blit after so the backdrop is behind
+
+        for i in range(len(stats_list)):
+            text = stats_list[i] # Getting the text
+            frameAlphaRect = frameTexts[i][0] # For reference later
+
+            # Making margin and distance adjustments
+            y += frameAlphaRect.get_height()*max(margin, 1)
+            x = (self.screen.get_width()-frameAlphaRect.get_width())//2
+
+            # Setting the min's and max's
+            minX, minY = min(x, minX), min(y, minY)
+            maxX, maxY = max(x+frameAlphaRect.get_width(), maxX), max(y+frameAlphaRect.get_height(), maxY)
+
+            # Now making the text
+            alphaRect, textSurf, textRect = display_text_alpha(text, fontsize, font, color, alpha, imagecolor, margin)
+            alphaRect.set_colorkey(imagecolor) # Making the backpart entirely transparent
+
+            # Adding to the blit queue
+            blitQueue.append([alphaRect, (x, y)])
+        
+        # Creating a backdrop for the stats (has to be just a little bit larger than the minimum to cover)
+        backdrop = pygame.Surface(((maxX-minX), (maxY-minY)))
+        backdrop.fill((30, 30, 30)); backdrop.set_alpha(alpha)
+        # Adding it to the screen centered properly
+        self.screen.blit(backdrop, (minX-(backdrop.get_width()-(maxX-minX))/2, minY-(backdrop.get_height()-(maxY-minY))/2))
+
+        # now blitting
+        for toblit in blitQueue:
+            screen.blit(toblit[0], toblit[1])
+
+
     def initializeMap(self, index):
+        # resetting stats
+        self.resetLevelStats()
+
         currentmap = self.backgroundHandler.getCurrentMap() 
 
         # Getting some values
@@ -560,12 +747,16 @@ class Player(pygame.sprite.Sprite):
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     self.up(dt)
+                    self.buttonsClicked += 1
                 elif event.key == pygame.K_DOWN:
                     self.down(dt)
+                    self.buttonsClicked += 1
                 elif event.key == pygame.K_LEFT:
                     self.left(dt)
+                    self.buttonsClicked += 1
                 elif event.key == pygame.K_RIGHT:
                     self.right(dt)
+                    self.buttonsClicked += 1
                 
                 elif event.key == pygame.K_ESCAPE:
                     self.exitLevel()
@@ -612,15 +803,31 @@ class Player(pygame.sprite.Sprite):
     
     def gainKey(self):
         self.hasKey = True # Player gains passage through brown doors
-        self.image.fill((0, 255, 0)) # Green tint effect
-        self.image.set_alpha(175)
+        self.image.fill(self.colordict["brown"]) # Complementary color of green tint effect to make it so the player can be seen
+        self.image.set_alpha(200)
 
     def checkKey(self):
         # If no key and brown collision, then player dies
         if self.hasKey == False:
             self.effectFunctions[self.colordict["black"]]() # Running death function 
         # Otherwise, nothing happens
-    
+
+    def teleportPlayer(self):
+        # This teleports the player the location of a light blue square
+        currentmap = self.backgroundHandler.getCurrentMap()
+        cellwidth = currentmap.cellwidth
+        cellheight = currentmap.cellheight
+        celllist = currentmap.celllist 
+        # Searching for light blue block to teleport to 
+        for row in range(len(celllist)):
+            for col in range(len(celllist[row])):
+                if celllist[row][col].color == self.colordict["lightblue"]:
+                    self.px, self.py = row*cellwidth+cellwidth/2, col*cellheight+cellheight/2 # Converting to pygame coordinates
+
+    def addAttempt(self):
+        # Adds one ot the attempt count
+        self.attemptCount += 1
+
     def resetPlayerParams(self):
         # Resets all params, dx, and dy
         for i in range(len(self.parameters)):
@@ -628,6 +835,12 @@ class Player(pygame.sprite.Sprite):
 
         self.dx = 0
         self.dy = 0
+
+    def resetLevelStats(self):
+        # Resets all of the stats for the level
+        self.attemptCount = 1 # starts at 1 
+        self.starttime = time.time()
+        self.buttonsClicked = 0
 
     def clearEventQueue(self):
         # Clearing all events
@@ -680,60 +893,7 @@ class Player(pygame.sprite.Sprite):
 
         # Clearing the event queue to prevent player from moving right after spawning
         self.clearEventQueue()
-
-    def readfile(self, filename="levels"):
-        # resetting the maps
-        self.backgroundHandler.maplist = []
-
-        lines = []
-
-        with open(filename+".txt", "r") as f:
-            for line in f:
-                lines.append(line)
-
-        colors = []
-        coords = []
-        
-        # Splitting and adding the lines to the appropriate list
-        for line in lines:
-            if "SPACER" in line:
-                colors.append([])
-                coords.append([])
-            else:
-                s = line.split(";")
-
-                # Changes string tuple into tuple
-                color = eval(s[0])
-                coord = eval(s[1])
-
-                # Checking if to add new line
-                if len(colors[-1]) <= coord[0]:
-                    colors[-1].append([])
-                    coords[-1].append([])
-
-                colors[-1][-1].append(color)
-                coords[-1][-1].append(coord)
-
-        for m in range(len(colors)):
-            # Initializing the map
-            toadd = MapLevel(self.screen, (0, 0), True, False, 25, 25, len(colors[m]), len(colors[m][0]))
-            # Adding the colors to the map
-            tempcolors = colors[m]
-            tempcoords = coords[m]
-
-            for row in range(len(tempcolors)):
-                for col in range((len(tempcolors[row]))):
-                    if tempcolors[row][col] not in self.colordict.values(): # If the color is not recognized in color dictionary, set it to defualt color
-                        tempcolors[row][col] = (170, 170, 170)
-                    elif tempcolors[row][col] == (self.colordict["startcolor"]): # Checking to see if it is the starting position
-                        toadd.startPos = (row, col) # Setting the start position#
-                    toadd.celllist[row][col].fill(tempcolors[row][col]) # Directly fill it for efficiency
-
-            self.backgroundHandler.maplist.append(toadd)
-        
-        # Updating the numbers for the level selects
-        self.backgroundHandler.initializeLevelButtons()
-
+    
     def update(self):
         # Updating dimensions
         self.pwidth = self.currentbase_width*self.parameters[1]
@@ -765,13 +925,14 @@ class Player(pygame.sprite.Sprite):
         self.runEffectQueue()
 
 
-p1 = Player(screen, [], [(100, 100)], 0, (123, 123, 123))
+p1 = Player(screen, [(100, 100)], 0, (123, 123, 123))
 playerSprite = pygame.sprite.Group()
 playerSprite.add(p1)
 
 screen.fill((0, 0, 0)) # Clearing screen completely before starting
 
-p1.readfile()
+p1.backgroundHandler.readlevelpack()
+p1.backgroundHandler.readlevelpack("tests")
 
 # Starting at the main menu (initializing the buttons, then drawing menu)
 p1.backgroundHandler.guiLevelDrawFunctions[p1.backgroundHandler.guiLevel]()

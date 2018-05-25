@@ -50,8 +50,7 @@ class MapCreator:
         self.boardheight = boardheight
         self.borders = borders
         
-        # In order of num keys (0 => (0,0,0, ... , len(colorlist)-1 => colorlist[-1]))
-        self.colorlist = [(128, 128, 128), (0, 0, 0), (255, 175, 255), (255, 0, 0), (185, 0, 255), (185, 125, 255), (255, 128, 0), (0, 255, 0), (78, 46, 40), (255, 255, 0)]
+        self.colorlist = [(128, 128, 128), (0, 0, 0), (255, 175, 255), (0, 0, 255), (173, 216, 230), (255, 0, 0), (185, 0, 255), (185, 125, 255), (255, 128, 0), (0, 255, 0), (78, 46, 40), (255, 255, 0)]
         self.color = (0, 0, 0)
 
         # Updating the display
@@ -62,7 +61,7 @@ class MapCreator:
         # Getting the current map 
         cmaplvl = self.maplevels[self.cmaplvlindex]
         # For selecting colors
-        keycolorlist = [pygame.K_0, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9]
+        keycolorlist = [pygame.K_q, pygame.K_w, pygame.K_e, pygame.K_r, pygame.K_t, pygame.K_y, pygame.K_u, pygame.K_i, pygame.K_o, pygame.K_p, pygame.K_a, pygame.K_s]
         if event.type == pygame.KEYDOWN:
             
             # Going between different levels
@@ -85,11 +84,14 @@ class MapCreator:
                 # Going to previous map level (min 0)
                 self.cmaplvlindex = max(0, self.cmaplvlindex-1)
 
-            # Saving the map
-            elif event.key == pygame.K_s:
+            # Saving the maps
+            elif event.key == pygame.K_0:
                 print("What would you like to name your maps?: ", end="")
                 self.saveMaps(str(input()))
-
+            # reading the maps
+            elif event.key == pygame.K_9:
+                print("What would you like to read in?: ", end="")
+                self.readfile(str(input()))
             # If number, select color
             elif event.key in keycolorlist:
                 try:
@@ -228,7 +230,6 @@ class MapCreator:
 
 s1 = pygame.Surface((502, 502))
 m = MapCreator(screen, [MapLevel(s1)])
-m.readfile()
 
 while True:
     for event in pygame.event.get():

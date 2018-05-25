@@ -2,24 +2,44 @@ import pygame, sys
 
 pygame.init()
 
-def text_objects(text, font, color, alpha=255, bgcolor=(30,30,30), rotation=0):
+def text_objects(text, font, color, bgcolor=(30,30,30), rotation=0):
     textSurface = font.render(text, True, color)
     textSurface = pygame.transform.rotate(textSurface, rotation)
 
     # Making the alpha surface
     alphaSurface = pygame.Surface(textSurface.get_size())
     alphaSurface.fill(bgcolor)
-    alphaSurface.set_alpha(alpha)
     alphaSurface.blit(textSurface, (0, 0))
 
     return alphaSurface, textSurface, textSurface.get_rect()
 
-def display_text(text, size, font, color, alpha=255, bgcolor=(30,30,30), rotation=0):
+def display_text(text, size, font, color, bgcolor=(30,30,30), rotation=0):
     pygame.font.init()
     torender = pygame.font.Font(font, size)
-    AlphaSurf, TextSurf, TextRect = text_objects(text, torender, color, alpha, bgcolor, rotation)
+    AlphaSurf, TextSurf, TextRect = text_objects(text, torender, color, bgcolor, rotation)
     TextRect.center = (0, 0)
     return AlphaSurf, TextSurf, TextRect
+
+
+def text_objects_alpha(text, font, color, alpha=255, bgcolor=(30,30,30), margin=0.25, rotation=0):
+    textSurface = font.render(text, True, color)
+    textSurface = pygame.transform.rotate(textSurface, rotation)
+
+    # Making the alpha surface
+    alphaSurface = pygame.Surface((textSurface.get_width()*(1+margin), textSurface.get_height()*(1+margin)))
+    alphaSurface.fill(bgcolor)
+    alphaSurface.set_alpha(alpha)
+    alphaSurface.blit(textSurface, (textSurface.get_width()*margin/2, textSurface.get_height()*margin/2))
+
+    return alphaSurface, textSurface, textSurface.get_rect()
+
+def display_text_alpha(text, size, font, color, alpha=255, bgcolor=(30,30,30), margin=0.25, rotation=0): # Margin is just multiplying the width and height by a decimal 
+    pygame.font.init()
+    torender = pygame.font.Font(font, size)
+    AlphaSurf, TextSurf, TextRect = text_objects_alpha(text, torender, color, alpha, bgcolor, margin, rotation)
+    TextRect.center = (0, 0)
+    return AlphaSurf, TextSurf, TextRect
+
 
 class Button(pygame.sprite.Sprite):
     def __init__(self, surface, x, y, size=(50, 30), color=(100, 100, 100), alpha=255):
@@ -63,8 +83,8 @@ class Button(pygame.sprite.Sprite):
         self.surface.blit(self.image, (self.x, self.y))
         
 class TextButton(Button):
-    imagecolor = (200,200,200) # For the bgcolor on the number
-    def __init__(self, surface, x, y, text, size, color=(0,0,0), alpha=185):
+    margin = 2.5
+    def __init__(self, surface, x, y, text, size, color=(0,0,0), imagecolor=(200, 200, 200), alpha=185, textalpha=185):
         
         self.surface = surface
 
@@ -72,12 +92,14 @@ class TextButton(Button):
         self.text = text
         self.size = size
         self.color = color
+        self.imagecolor = imagecolor
         self.alpha = alpha
+        self.textalpha = textalpha
         self.hovercolor = tuple([max(0, val-100) for val in self.color])
         
         # Image values
-        self.AlphaSurf, self.TextSurf, self.TextRect = display_text(text, size, pygame.font.get_default_font(), color, alpha, self.imagecolor)
-        self.image = pygame.Surface((self.AlphaSurf.get_width()*2.5, self.AlphaSurf.get_height()*2.5)) # Image is translucent and has padding for the text(by scaling)
+        self.AlphaSurf, self.TextSurf, self.TextRect = display_text_alpha(text, size, pygame.font.get_default_font(), color, textalpha, self.imagecolor, 0)
+        self.image = pygame.Surface((self.AlphaSurf.get_width()*self.margin, self.AlphaSurf.get_height()*self.margin)) # Image is translucent and has padding for the text(by scaling)
         self.image.fill(self.imagecolor); self.image.set_alpha(alpha) # Specs for color and transparency
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
@@ -96,6 +118,13 @@ class TextButton(Button):
         self.image.fill(self.imagecolor); self.image.set_alpha(self.alpha) # Specs for color and transparency
         self.image.blit(self.AlphaSurf, (self.image.get_width()//2-self.AlphaSurf.get_width()//2, self.image.get_height()//2-self.AlphaSurf.get_height()//2)) # Readding the numbers
         self.surface.blit(self.image, (self.x, self.y)) # Adding it to the screen
+
+    def setCenter(self, x, y):
+        # Gives an option to set a center
+        self.x, self.y = x-self.image.get_width()/2, y-self.image.get_height()/2
+        # Updating rect
+        self.rect.center = x, y
+        self.redraw()
 
 ###############
 ## TEST CODE ##

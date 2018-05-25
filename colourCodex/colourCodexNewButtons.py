@@ -10,9 +10,6 @@ pygame.init()
 screen_width, screen_height = size = 625,625
 screen = pygame.display.set_mode(size)
 
-# MAKE ESCAPE/QUIT BUTTON FOR THE LOWEST GUI LEVEL
-
-
 # GENERAL FUNCTIONS
 
 def surface_fade_out(screen, alphacap=60, iterspeed=2, color=(0,0,0)): # Default color to fade out to is black, 60 is good alpha
