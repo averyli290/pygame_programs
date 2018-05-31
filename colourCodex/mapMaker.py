@@ -1,4 +1,6 @@
 from CellBoard import CellBoard
+from colourCodexBasicFunctions import *
+from displaytext import *
 import pygame, sys
 from copy import deepcopy
 import random, math
@@ -6,19 +8,6 @@ import random, math
 size = x, y = 1440, 900
 screen = pygame.display.set_mode((size))
 screen.fill((255, 255, 255))
-
-pygame.font.init()
-
-def text_objects(text, font, color, rotation=0):
-    textSurface = font.render(text, True, color)
-    textSurface = pygame.transform.rotate(textSurface, rotation)
-    return textSurface, textSurface.get_rect()
-
-def display_text(text, size, font, color, rotation=0):
-    torender = pygame.font.Font(font, size)
-    TextSurf, TextRect = text_objects(text, torender, color, rotation)
-    TextRect.center = (0, 0)
-    return TextSurf, TextRect
 
 class MapLevel(CellBoard):
     def __init__(self, surface, borders=True, verts=False, cellwidth=20, cellheight=20, boardwidth=25, boardheight=25):
@@ -49,9 +38,14 @@ class MapCreator:
         self.boardwidth = boardwidth
         self.boardheight = boardheight
         self.borders = borders
-        
-        self.colorlist = [(128, 128, 128), (0, 0, 0), (255, 175, 255), (0, 0, 255), (173, 216, 230), (255, 0, 0), (185, 0, 255), (185, 125, 255), (255, 128, 0), (0, 255, 0), (78, 46, 40), (255, 255, 0)]
+       
+        # Creating the list of colors
+        self.order, self.colordict, self.effectdict = readColors()
+        self.colorlist = [self.colordict[colorname] for colorname in self.order if self.effectdict[self.colordict[colorname]] != None] # Making sure that the list has the same order every single time, not adding if the color has no effect
         self.color = (0, 0, 0)
+
+        # For selecting colors
+        self.keycolorlist = [pygame.K_q, pygame.K_w, pygame.K_e, pygame.K_r, pygame.K_t, pygame.K_y, pygame.K_u, pygame.K_i, pygame.K_o, pygame.K_p, pygame.K_a, pygame.K_s, pygame.K_d, pygame.K_f, pygame.K_g,pygame.K_h, pygame.K_j, pygame.K_k, pygame.K_l, pygame.K_z, pygame.K_x, pygame.K_c, pygame.K_v, pygame.K_b, pygame.K_n, pygame.K_m][:len(self.colorlist)+1]
 
         # Updating the display
         self.update()
@@ -60,8 +54,7 @@ class MapCreator:
         
         # Getting the current map 
         cmaplvl = self.maplevels[self.cmaplvlindex]
-        # For selecting colors
-        keycolorlist = [pygame.K_q, pygame.K_w, pygame.K_e, pygame.K_r, pygame.K_t, pygame.K_y, pygame.K_u, pygame.K_i, pygame.K_o, pygame.K_p, pygame.K_a, pygame.K_s]
+
         if event.type == pygame.KEYDOWN:
             
             # Going between different levels
@@ -93,13 +86,13 @@ class MapCreator:
                 print("What would you like to read in?: ", end="")
                 self.readfile(str(input()))
             # If number, select color
-            elif event.key in keycolorlist:
+            elif event.key in self.keycolorlist:
                 try:
-                    self.color = self.colorlist[keycolorlist.index(event.key)]
-                    print(self.color)
+                    self.color = self.colorlist[self.keycolorlist.index(event.key)]
+                    print(self.color, self.effectdict[self.color])
                 except:
                     # Error message for telling range of numbers to select
-                    print("You have selected an unknown color. Please select numbers only in the range (0, " + str(len(self.colorlist)-1) + str(")"))
+                    print("You have selected an unknown color.")
         
         elif event.type == pygame.MOUSEMOTION or event.type == pygame.MOUSEBUTTONDOWN:
             # Left mouse click to place
@@ -130,8 +123,8 @@ class MapCreator:
         self.surface.blit(self.maplevels[self.cmaplvlindex].surface, (0, 0))
 
         # Displaying the current map number
-        self.maplabelsurf, self.maplabelrect = display_text("Level: "+str(self.cmaplvlindex), 20, pygame.font.get_default_font(), (0,0,0))
-        self.surface.blit(self.maplabelsurf, (1200, 100))
+        self.maplabelmarginsurf, self.maplabeltextsurf, self.maplabelrect = display_text("Level: "+str(self.cmaplvlindex), 20, pygame.font.get_default_font(), (0,0,0), (255, 255, 255))
+        self.surface.blit(self.maplabelmarginsurf, (1200, 100))
 
     def isEmptyMap(self, m):
         # For clearing empty maps

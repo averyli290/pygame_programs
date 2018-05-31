@@ -1,45 +1,7 @@
 import pygame, sys
+from displaytext import *
 
 pygame.init()
-
-def text_objects(text, font, color, bgcolor=(30,30,30), rotation=0):
-    textSurface = font.render(text, True, color)
-    textSurface = pygame.transform.rotate(textSurface, rotation)
-
-    # Making the alpha surface
-    alphaSurface = pygame.Surface(textSurface.get_size())
-    alphaSurface.fill(bgcolor)
-    alphaSurface.blit(textSurface, (0, 0))
-
-    return alphaSurface, textSurface, textSurface.get_rect()
-
-def display_text(text, size, font, color, bgcolor=(30,30,30), rotation=0):
-    pygame.font.init()
-    torender = pygame.font.Font(font, size)
-    AlphaSurf, TextSurf, TextRect = text_objects(text, torender, color, bgcolor, rotation)
-    TextRect.center = (0, 0)
-    return AlphaSurf, TextSurf, TextRect
-
-
-def text_objects_alpha(text, font, color, alpha=255, bgcolor=(30,30,30), margin=0.25, rotation=0):
-    textSurface = font.render(text, True, color)
-    textSurface = pygame.transform.rotate(textSurface, rotation)
-
-    # Making the alpha surface
-    alphaSurface = pygame.Surface((textSurface.get_width()*(1+margin), textSurface.get_height()*(1+margin)))
-    alphaSurface.fill(bgcolor)
-    alphaSurface.set_alpha(alpha)
-    alphaSurface.blit(textSurface, (textSurface.get_width()*margin/2, textSurface.get_height()*margin/2))
-
-    return alphaSurface, textSurface, textSurface.get_rect()
-
-def display_text_alpha(text, size, font, color, alpha=255, bgcolor=(30,30,30), margin=0.25, rotation=0): # Margin is just multiplying the width and height by a decimal 
-    pygame.font.init()
-    torender = pygame.font.Font(font, size)
-    AlphaSurf, TextSurf, TextRect = text_objects_alpha(text, torender, color, alpha, bgcolor, margin, rotation)
-    TextRect.center = (0, 0)
-    return AlphaSurf, TextSurf, TextRect
-
 
 class Button(pygame.sprite.Sprite):
     def __init__(self, surface, x, y, size=(50, 30), color=(100, 100, 100), alpha=255):
@@ -83,8 +45,7 @@ class Button(pygame.sprite.Sprite):
         self.surface.blit(self.image, (self.x, self.y))
         
 class TextButton(Button):
-    margin = 2.5
-    def __init__(self, surface, x, y, text, size, color=(0,0,0), imagecolor=(200, 200, 200), alpha=185, textalpha=185):
+    def __init__(self, surface, x, y, text, size, color=(0,0,0), imagecolor=(200, 200, 200), alpha=185, textalpha=185, margin=2.5):
         
         self.surface = surface
 
@@ -95,6 +56,7 @@ class TextButton(Button):
         self.imagecolor = imagecolor
         self.alpha = alpha
         self.textalpha = textalpha
+        self.margin = margin 
         self.hovercolor = tuple([max(0, val-100) for val in self.color])
         
         # Image values
